@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="AnimationRetargeting" inherits="Node" version="3.3">
+	<brief_description>
+	AnimationRetargeting is used to transfer [Animation] data authored for one [Skeleton] to another [Skeleton] with similar propotions and bone hierarchy.
+	</brief_description>
+	<description>
+	AnimationRetargeting is used to transfer [Animation] data authored for one [Skeleton] to another [Skeleton] with similar propotions and bone hierarchy. If skeleton bone hierarchy is different a bone mapping [Dictionary] is required to instruct the animation retargeter which bone should match with another bone in an unknown skeleton. AnimationRetargeting can also be used to correct bone errors in skeleton animations. Retargeted animations can be baked and exported to new [Animation] files or [AnimationPlayer]s.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="start_retargeting">
+			<return type="void">
+			</return>
+			<description>
+			Starts retargeting process by first creating required data sets followed by retargeting all animations found in source [Animationplayer].
+			</description>
+		</method>
+		<method name="enable_correction_mode">
+			<return type="void">
+			</return>
+			<description>
+			Enables bone corrections. All bone correction input will be accepted and editor viewport will update animations immediately to changes.
+			</description>
+		</method>
+		<method name="disable_correction_mode">
+			<return type="bool">
+			</return>
+			<description>
+			Disabled bone corrections. All bone correction input will be ignored and editor viewport will not update animations immediately to changes.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="animation_export_directory" type="String" setter="set_export_directory" getter="get_export_directory" default="&quot;res://&quot;">
+		Directory and folder to save finished retargeted animations if export animations is enabled. Directory and folder must already exist.
+		</member>
+		<member name="animation_export_format" type="int" setter="set_animation_export_format" getter="get_animation_export_format" enum="AnimationRetargeting.AnimationExportFormat" default="0">
+		Choice of fileformat for exported animations. TRES text files are version-control friendly and have better human readability while ANIM binary files have a smaller filesize and faster loading.
+		</member>
+		<member name="animation_rename_prefix" type="String" setter="set_animation_rename_prefix" getter="get_animation_rename_prefix" default="&quot;&quot;">
+		Additional text added in front of filenames of exported animations.
+		</member>
+		<member name="animation_rename_suffix" type="String" setter="set_animation_rename_suffix" getter="get_animation_rename_suffix" default="&quot;&quot;">
+		Additional text added at end of filenames of exported animations.
+		</member>
+		<member name="correction_bone" type="String" setter="set_correction_bone" getter="get_correction_bone" default="&quot;&quot;">
+		Bone that should be changed in current animation with correction input (position/rotation/scale). Requires correction mode to be turned on. 
+		</member>
+		<member name="custom_bone_mapping" type="Dictionary" setter="set_custom_bone_mapping" getter="get_custom_bone_mapping" default="{}">
+		Custom dictionary mapping to match source skeleton bone names with target skeleton bone names. Required dictionary format is {"source_bone_name" : "target_bone_name"}. If not left empty (default) only included bones will be retargeted.
+		</member>
+		<member name="export_animations" type="bool" setter="set_export_animations" getter="get_export_animations" default="true">
+		If enabled exports retargeted animations to export folder in chosen export format.
+		</member>
+		<member name="ignore_bones" type="PackedStringArray" setter="set_ignore_bones" getter="get_ignore_bones" default="PackedStringArray(  )">
+		List of bone names that should be ignored for retargeting animations, e.g. use this to exclude your Inverse Kinematic or facial rig bones.
+		</member>
+		<member name="position_correction" type="Vector3" setter="set_position_correction" getter="get_position_correction" default="Vector3( 0, 0, 0 )">
+		Changes position of selected correction bone for current animation. Requires correction mode to be turned on.
+		</member>
+		<member name="replace_retarget_animations" type="bool" setter="set_replace_retarget_animations" getter="get_replace_retarget_animations" default="true">
+		If enabled overwrites animations in target animationplayer with newly retargeted animations.
+		</member>
+		<member name="retarget_animationplayer_path" type="NodePath" setter="set_retarget_animationplayer_path" getter="get_retarget_animationplayer_path" default="NodePath(&quot;&quot;)">
+		NodePath to target skeleton Node used for retargeting animation.
+		</member>
+		<member name="retarget_bone_position" type="bool" setter="set_retarget_position" getter="get_retarget_position" default="false">
+		Applies position differences for each bone between source skeleton and target skeleton to retargeted animations. Default turned off as this is usually not required cause bones are forced to connect with their parent bone position in current skeleton implementation.
+		</member>
+		<member name="retarget_bone_rotation" type="bool" setter="set_retarget_rotation" getter="get_retarget_rotation" default="true">
+		Applies rotation differences for each bone between source skeleton and target skeleton to retargeted animations. Default turned on as this is basically always required to retarget animations.
+		</member>
+		<member name="retarget_bone_scale" type="bool" setter="set_retarget_scale" getter="get_retarget_scale" default="false">
+		Applies scale differences for each bone between source skeleton and target skeleton to retargeted animations. Default turned off as it is recommended to keep bone scale always at 1 as it can have unpredictable sideeffects especially with physic bones.
+		</member>
+		<member name="retarget_skeleton_path" type="NodePath" setter="set_retarget_skeleton_path" getter="get_retarget_skeleton_path" default="NodePath(&quot;&quot;)">
+		NodePath to target skeleton Node used for retargeting animation.
+		</member>
+		<member name="rotation_correction" type="Vector3" setter="set_rotation_correction" getter="get_rotation_correction" default="Vector3( 0, 0, 0 )">
+		Changes rotation of selected correction bone for current animation. Requires correction mode to be turned on.
+		</member>
+		<member name="scale_correction" type="Vector3" setter="set_scale_correction" getter="get_scale_correction" default="Vector3( 0, 0, 0 )">
+		Changes scale of selected correction bone for current animation. Requires correction mode to be turned on.
+		</member>
+		<member name="source_animationplayer_path" type="NodePath" setter="set_source_animationplayer_path" getter="get_source_animationplayer_path" default="NodePath(&quot;&quot;)">
+		NodePath to source animationplayer skeleton Node used for retargeting animation.
+		</member>
+		<member name="source_rig_type" type="int" setter="set_source_rig_type" getter="get_source_rig_type" enum="AnimationRetargeting.SourceRigType" default="0">
+		If available  applies bone mapping preset for chosen source rig.
+		</member>
+		<member name="source_skeleton_path" type="NodePath" setter="set_source_skeleton_path" getter="get_source_skeleton_path" default="NodePath(&quot;&quot;)">
+		NodePath to source skeleton Node used for retargeting animation.
+		</member>
+		<member name="target_rig_type" type="int" setter="set_target_rig_type" getter="get_target_rig_type" enum="AnimationRetargeting.TargetRigType" default="0">
+		If available applies bone mapping preset for chosen target rig.
+		</member>
+		<member name="export_animationplayer" type="bool" setter="set_export_animationplayer" getter="get_export_animationplayer", default="true">
+		If enabled creates a new [AnimationPlayer] container for all retargeted animations and saves it to a [PackedScene] in the export folder.
+		</member>
+		<member name="retarget_mode" type="int" setter="set_retarget_mode" getter="get_retarget_mode" enum="AnimationRetargeting.AnimationRetargetMode" default="0">
+		Defines which animations should be retargeted and how. Options are to retargeting the entire source animationplayer, only the current, playing animation or to record the source skeleton motion directly and push the resulting animation to the target skeleton for e.g. live motion capture.
+		</member>
+	</members>
+	<constants>
+		<constant name="RETARGET_MODE_ANIMATIONPLAYER" value="0" enum="AnimationRetargetMode">
+		Retargetes all [Animation]s found in the source [AnimationPlayer].
+		</constant>
+		<constant name="RETARGET_MODE_CURRENT_ANIMATION" value="1" enum="AnimationRetargetMode">
+		Retargetes only the current, playing [Animation] of the source [AnimationPlayer]. Will do nothing if the [Animation] is stopped or reached its playback end without loop set to true.
+		</constant>
+		<constant name="RETARGET_MODE_LIVE_MOTION_CAPTURE" value="2" enum="AnimationRetargetMode">
+		Retargetes the source [Skeleton] bone poses to the target [Skeleton] bone poses with a small frame buffer delay and optional recording inside a new [Animation] track.
+		</constant>
+		
+		<constant name="ANIMATION_EXPORT_TRES" value="0" enum="AnimationExportFormat">
+		Export retargeted animations as a TRES text file with better version-control support and human readability compared to ANIM binary files.
+		</constant>
+		<constant name="ANIMATION_EXPORT_ANIM" value="1" enum="AnimationExportFormat">
+		Export retargeted animations as a ANIM binary file with smaller filesize and faster loading compared to TRES text files.
+		</constant>
+		<constant name="SOURCE_RIG_CUSTOM" value="0" enum="SourceRigType">
+		Use custom bone mapping if available for reading source skeleton bones.
+		</constant>
+		<constant name="SOURCE_RIG_RIGIFY2" value="1" enum="SourceRigType">
+		Use rigify2 bone mapping if available for reading source skeleton bones.
+		</constant>
+		<constant name="SOURCE_RIG_GENESIS3AND8" value="2" enum="SourceRigType">
+		Use genesis3 and genesis8 bone mapping if available for reading source skeleton bones.
+		</constant>
+		<constant name="SOURCE_RIG_3DSMAX" value="3" enum="SourceRigType">
+		Use 3dsmax bone mapping if available for reading source skeleton bones.
+		</constant>
+		<constant name="SOURCE_RIG_MAKEHUMAN" value="4" enum="SourceRigType">
+		Use makehuman bone mapping if available for reading source skeleton bones.
+		</constant>
+		<constant name="TARGET_RIG_CUSTOM" value="0" enum="TargetRigType">
+		Use custom bone mapping if available for retargeting animations to target skeleton.
+		</constant>
+		<constant name="TARGET_RIG_RIGIFY2" value="1" enum="TargetRigType">
+		Use rigify2 bone mapping if available for retargeting animations to target skeleton.
+		</constant>
+		<constant name="TARGET_RIG_GENESIS3AND8" value="2" enum="TargetRigType">
+		Use genesis3 and genesis8 bone mapping if available for retargeting animations to target skeleton.
+		</constant>
+		<constant name="TARGET_RIG_3DSMAX" value="3" enum="TargetRigType">
+		Use 3dsmax bone mapping if available for retargeting animations to target skeleton.
+		</constant>
+		<constant name="TARGET_RIG_MAKEHUMAN" value="4" enum="TargetRigType">
+		Use makehuman bone mapping if available for retargeting animations to target skeleton.
+		</constant>
+		<constant name="CORRECTION_MODE_DISABLED" value="0" enum="CorrectionMode">
+		Disable correction mode to ignore correction input and stop immediate animation update in Editor Viewport.
+		</constant>
+		<constant name="CORRECTION_MODE_ENABLED" value="1" enum="CorrectionMode">
+		Enable correction mode to apply correction input and immediate animation update in Editor Viewport.
+		</constant>
+	</constants>
+</class>
