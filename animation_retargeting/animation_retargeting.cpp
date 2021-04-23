@@ -52,6 +52,13 @@ bool AnimationRetargeting::_valid_setup() {
 		retarget_mapping.clear();
 		return false;
 	}
+	if (retarget_mode == AnimationRetargeting::RETARGET_MODE_CURRENT_ANIMATION) {
+		String current_animation_playback_id = _source_animationplayer->get_current_animation();
+		if (current_animation_playback_id == "") {
+			ERR_FAIL_COND_V_MSG(true, false, vformat("Failed to get playing Animation from AnimationPlayer. Animation needs to play currently or else AnimationPlayer returns an empty animation_id."));
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -573,19 +580,21 @@ void AnimationRetargeting::set_position_correction(const Vector3 &p_position_cor
 	if (correction_mode == AnimationRetargeting::CORRECTION_MODE_ENABLED) {
 
 		String animation_id = _retarget_animationplayer->get_current_animation();
-		float current_animation_position = _retarget_animationplayer->get_current_animation_position();
+		if (animation_id != "") {
+			float current_animation_position = _retarget_animationplayer->get_current_animation_position();
 
-		Ref<Animation> source_animation = _source_animationplayer->get_animation(animation_id);
+			Ref<Animation> source_animation = _source_animationplayer->get_animation(animation_id);
 
-		Ref<Animation> retargeted_animation = _retarget_animation_track(source_animation);
+			Ref<Animation> retargeted_animation = _retarget_animation_track(source_animation);
 
-		if (replace_retarget_animations) {
-			if (_retarget_animationplayer->has_animation(animation_id)) {
-				_retarget_animationplayer->remove_animation(animation_id);
+			if (replace_retarget_animations) {
+				if (_retarget_animationplayer->has_animation(animation_id)) {
+					_retarget_animationplayer->remove_animation(animation_id);
+				}
+				_retarget_animationplayer->add_animation(animation_id, retargeted_animation);
+				_retarget_animationplayer->play(animation_id);
+				_retarget_animationplayer->seek(current_animation_position, true);
 			}
-			_retarget_animationplayer->add_animation(animation_id, retargeted_animation);
-			_retarget_animationplayer->play(animation_id);
-			_retarget_animationplayer->seek(current_animation_position, true);
 		}
 	}
 }
@@ -600,19 +609,21 @@ void AnimationRetargeting::set_rotation_correction(const Vector3 &p_rotation_cor
 	if (correction_mode == AnimationRetargeting::CORRECTION_MODE_ENABLED) {
 
 		String animation_id = _retarget_animationplayer->get_current_animation();
-		float current_animation_position = _retarget_animationplayer->get_current_animation_position();
+		if (animation_id != "") {
+			float current_animation_position = _retarget_animationplayer->get_current_animation_position();
 
-		Ref<Animation> source_animation = _source_animationplayer->get_animation(animation_id);
+			Ref<Animation> source_animation = _source_animationplayer->get_animation(animation_id);
 
-		Ref<Animation> retargeted_animation = _retarget_animation_track(source_animation);
+			Ref<Animation> retargeted_animation = _retarget_animation_track(source_animation);
 
-		if (replace_retarget_animations) {			
-			if (_retarget_animationplayer->has_animation(animation_id)) {
-				_retarget_animationplayer->remove_animation(animation_id);
+			if (replace_retarget_animations) {
+				if (_retarget_animationplayer->has_animation(animation_id)) {
+					_retarget_animationplayer->remove_animation(animation_id);
+				}
+				_retarget_animationplayer->add_animation(animation_id, retargeted_animation);
+				_retarget_animationplayer->play(animation_id);
+				_retarget_animationplayer->seek(current_animation_position, true);
 			}
-			_retarget_animationplayer->add_animation(animation_id, retargeted_animation);
-			_retarget_animationplayer->play(animation_id);
-			_retarget_animationplayer->seek(current_animation_position, true);
 		}
 	}
 }
@@ -627,19 +638,21 @@ void AnimationRetargeting::set_scale_correction(const Vector3 &p_scale_correctio
 	if (correction_mode == AnimationRetargeting::CORRECTION_MODE_ENABLED) {
 
 		String animation_id = _retarget_animationplayer->get_current_animation();
-		float current_animation_position = _retarget_animationplayer->get_current_animation_position();
+		if (animation_id != "") {
+			float current_animation_position = _retarget_animationplayer->get_current_animation_position();
 
-		Ref<Animation> source_animation = _source_animationplayer->get_animation(animation_id);
+			Ref<Animation> source_animation = _source_animationplayer->get_animation(animation_id);
 
-		Ref<Animation> retargeted_animation = _retarget_animation_track(source_animation);
+			Ref<Animation> retargeted_animation = _retarget_animation_track(source_animation);
 
-		if (replace_retarget_animations) {
-			if (_retarget_animationplayer->has_animation(animation_id)) {
-				_retarget_animationplayer->remove_animation(animation_id);
+			if (replace_retarget_animations) {
+				if (_retarget_animationplayer->has_animation(animation_id)) {
+					_retarget_animationplayer->remove_animation(animation_id);
+				}
+				_retarget_animationplayer->add_animation(animation_id, retargeted_animation);
+				_retarget_animationplayer->play(animation_id);
+				_retarget_animationplayer->seek(current_animation_position, true);
 			}
-			_retarget_animationplayer->add_animation(animation_id, retargeted_animation);
-			_retarget_animationplayer->play(animation_id);
-			_retarget_animationplayer->seek(current_animation_position, true);
 		}
 	}
 }
@@ -649,7 +662,7 @@ Vector3 AnimationRetargeting::get_scale_correction() const {
 }
 
 void AnimationRetargeting::_validate_property(PropertyInfo &property) const {
-	if (property.name == "correction_bone") {		
+	if (property.name == "correction_bone") {
 		if (_retarget_skeleton) {
 			String names("--,");
 			for (int i = 0; i < _retarget_skeleton->get_bone_count(); i++) {
