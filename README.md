@@ -8,6 +8,10 @@ The module is work in progress, only use the master/main branch for testing.
 
 See [Godot 4.x](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_4.x) and [Godot 3.x](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_3.x) branch respectively.
 
+Due to popular demand an addon version made with GDScript ~~is~~ will be available (at some point). This version does not have the full feature set due to performance restrictions, addons are just to slow.
+
+See [Godot 4.x GDScript](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_4.x_gdscript) and [Godot 3.x GDScript](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_3.x_gdscript) branch respectively.
+
 Introduces a new Node Type that can be used to transfer Animation data authored for one Skeleton to another Skeleton inside the Godot Editor or at runtime in your game project.
 
 ## Features:
