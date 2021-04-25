@@ -226,7 +226,6 @@ func _add_missing_bones_in_animation_track(p_new_retargeted_animation : Animatio
 		bone_keys = custom_bone_mapping.values()
 	
 	if target_rig_type == TARGET_RIG_GENESIS3AND8:
-		print("fdsfsdfdsfdsaaaaaaaaaaaaaaaaaaa")
 		bone_keys = genesis3and8_bone_mapping.keys()
 	
 	var found_bone_track : bool = false
