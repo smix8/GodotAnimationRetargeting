@@ -19,7 +19,7 @@ const AnimationRetargetingClass = preload("res://addons/animation_retargeting/An
 
 func _enter_tree():
 	
-	add_custom_type("AnimationRetargeting2", "Node", AnimationRetargetingClass, preload("res://addons/animation_retargeting/ar_icon.png"))
+	add_custom_type("AnimationRetargeting", "Node", AnimationRetargetingClass, preload("res://addons/animation_retargeting/ar_icon.png"))
 	
 	editor = get_editor_interface()
 	
