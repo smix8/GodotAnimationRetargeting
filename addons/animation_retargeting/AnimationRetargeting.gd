@@ -407,8 +407,6 @@ func get_retarget_animationplayer_path() -> NodePath:
 
 func set_export_directory(p_directory : String):
 	animation_export_directory = p_directory.strip_edges()
-	if !animation_export_directory.begins_with("res://"):
-		animation_export_directory = "res://"
 
 func get_export_directory() -> String:
 	return animation_export_directory
