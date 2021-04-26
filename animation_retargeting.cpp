@@ -485,9 +485,6 @@ AnimationRetargeting::AnimationExportFormat AnimationRetargeting::get_animation_
 
 void AnimationRetargeting::set_export_directory(const String &p_directory) {	
 	animation_export_directory = p_directory.strip_edges();
-	if (!animation_export_directory.begins_with("res://")) {
-		animation_export_directory = "res://";
-	}
 }
 
 String AnimationRetargeting::get_export_directory() const {
