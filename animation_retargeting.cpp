@@ -585,7 +585,7 @@ void AnimationRetargeting::set_sync_playback(const bool &p_enabled) {
 	sync_playback = p_enabled;
 	if (sync_playback && (_source_animationplayer != nullptr) && (_retarget_animationplayer != nullptr)) {
 		String current_animation_playback_id = _source_animationplayer->get_current_animation();		
-		if (current_animation_playback_id == "") {
+		if (current_animation_playback_id != "") {
 			if (_retarget_animationplayer->has_animation(current_animation_playback_id)) {			
 				_source_animationplayer->stop();
 				_retarget_animationplayer->stop();
