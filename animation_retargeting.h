@@ -54,7 +54,7 @@ class AnimationRetargeting : public Node {
 			ANIMATION_EXPORT_ANIM
 		};
 		
-		AnimationExportFormat animation_export_format = ANIMATION_EXPORT_TRES;
+		AnimationExportFormat animation_export_format = ANIMATION_EXPORT_ANIM;
 
 		String animation_export_directory = "res://";
 		bool export_animations = true;
@@ -94,11 +94,21 @@ class AnimationRetargeting : public Node {
 		bool retarget_position = false;
 		bool retarget_rotation = true;
 		bool retarget_scale = false;
+		bool root_motion = false;
+		bool fixate_in_place = false;
+		bool sync_playback = false;
+		double source_skeleton_scale = 1.0;
+		double retarget_skeleton_scale = 1.0;
 
 		NodePath source_skeleton_node_path;
 		NodePath source_animationplayer_node_path;
 		NodePath retarget_skeleton_node_path;
 		NodePath retarget_animationplayer_node_path;
+
+		void set_source_skeleton_scale(const float &p_source_skeleton_scale);
+		float get_source_skeleton_scale();
+		void set_retarget_skeleton_scale(const float &p_retarget_skeleton_scale);
+		float get_retarget_skeleton_scale();
 
 		Skeleton *_source_skeleton = nullptr;
 		AnimationPlayer *_source_animationplayer = nullptr;
@@ -143,6 +153,12 @@ class AnimationRetargeting : public Node {
 		bool get_retarget_rotation();
 		void set_retarget_scale(const bool &p_enabled);
 		bool get_retarget_scale();
+		void set_root_motion(const bool &p_enabled);
+		bool get_root_motion();
+		void set_fixate_in_place(const bool &p_enabled);
+		bool get_fixate_in_place();
+		void set_sync_playback(const bool &p_enabled);
+		bool get_sync_playback();
 
 		// CORRECTION
 
@@ -210,6 +226,10 @@ class AnimationRetargeting : public Node {
 
 	private:
 
+		int _source_root_bone_inx = -1;
+		StringName _source_root_bone_name = "";		
+		double _skeleton_scale_mod = 1.0;
+		bool _calculate_retargeting_data = true;
 		bool _valid_setup();
 		Ref<Animation> _retarget_animation_track(Ref<Animation> &p_source_animation);
 		void _add_missing_bones_in_animation_track(Ref<Animation> &p_new_retargeted_animation);

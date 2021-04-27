@@ -66,13 +66,28 @@
 		NodePath to target skeleton Node used for retargeting animation.
 		</member>
 		<member name="retarget_bone_position" type="bool" setter="set_retarget_position" getter="get_retarget_position" default="false">
-		Applies position differences for each bone between source skeleton and target skeleton to retargeted animations. Default turned off as this is usually not required cause bones are forced to connect with their parent bone position in current skeleton implementation.
+		Applies position differences for each bone between source skeleton and target skeleton to retargeted animations. Default turned off as this is usually not required cause bones are forced to connect with their parent bone position in current skeleton implementation. The skeleton implementation is subject to change in Godot. Currently the result is that bone length of the source skeleton is applied to the retarget skeleton and without the possibly to change the bone origin so all affected bones are stretched.
 		</member>
 		<member name="retarget_bone_rotation" type="bool" setter="set_retarget_rotation" getter="get_retarget_rotation" default="true">
 		Applies rotation differences for each bone between source skeleton and target skeleton to retargeted animations. Default turned on as this is basically always required to retarget animations.
 		</member>
 		<member name="retarget_bone_scale" type="bool" setter="set_retarget_scale" getter="get_retarget_scale" default="false">
-		Applies scale differences for each bone between source skeleton and target skeleton to retargeted animations. This does not account for scaling the [Skeleton] node or scaling a [Spatial] parent node of the [Skeleton]. It is not recommended to scale nodes or bone scale as this can have unpredictable sideeffects especially with physic bones and also add precision errors that are visible as small bone jitter.
+		Applies scale differences for each bone between source skeleton and target skeleton to retargeted animations. This alone does not account for scaling the [Skeleton] node or scaling a [Spatial] parent node of the [Skeleton]. To scale bone positions and scale correctly set the scale manually at both source_skeleton_scale and retarget_skeleton_scale. It is not recommended to scale nodes or bone scale as this can have unpredictable sideeffects especially with physic bones and also add precision errors that are visible as small bone jitter.
+		</member>
+		<member name="root_motion" type="bool" setter="set_root_motion" getter="get_root_motion" default="false">
+		If enabled calculates and applies the position and scale offset for the root/hip bone only even while retarget_bone_position is disabled.
+		</member>
+		<member name="fixate_in_place" type="bool" setter="set_fixate_in_place" getter="get_fixate_in_place" default="false">
+		If enabled fixates the skeleton in place by canceling all horizontal movement of the root/hip bone.
+		</member>
+		<member name="sync_playback" type="bool" setter="set_sync_playback" getter="get_sync_playback" default="false">
+		If enabled synchronises the animation playback between source and target [AnimationPlayer]. Does nothing if no animation is currently playing or the animation is not found in both animationplayers.
+		</member>
+		<member name="source_skeleton_scale" type="float" setter="set_source_skeleton_scale" getter="get_source_skeleton_scale" default="1.0">
+		The combined scaling value applied to the source skeleton e.g. skeleton node scaling or outside from scaling multiple 3d spatial nodes. Import for retargeting bone positions and root motion as bone values are not updated when scaling is applied from outside the bones.
+		</member>
+		<member name="retarget_skeleton_scale" type="float" setter="set_retarget_skeleton_scale" getter="get_retarget_skeleton_scale" default="1.0">
+		The combined scaling value applied to the retarget skeleton e.g. skeleton node scaling or outside from scaling multiple 3d spatial nodes. Import for retargeting bone positions and root motion as bone values are not updated when scaling is applied from outside the bones.
 		</member>
 		<member name="retarget_skeleton_path" type="NodePath" setter="set_retarget_skeleton_path" getter="get_retarget_skeleton_path" default="NodePath(&quot;&quot;)">
 		NodePath to target skeleton Node used for retargeting animation.
