@@ -44,6 +44,11 @@ export(bool) var replace_retarget_animations : bool = true
 export(bool) var retarget_position : bool = false
 export(bool) var retarget_rotation : bool = true
 export(bool) var retarget_scale  : bool = false
+export(bool) var root_motion = false
+export(bool) var fixate_in_place = false
+export(bool) var sync_playback = false setget set_sync_playback, get_sync_playback
+export(float) var source_skeleton_scale = 1.0
+export(float) var retarget_skeleton_scale = 1.0
 
 export(bool) var export_animations : bool = true
 export(bool) var export_animationplayer : bool = true
@@ -108,20 +113,37 @@ func start_retargeting() -> void:
 		retarget_skeleton_animations()
 	
 	if _source_animationplayer.has_animation(current_animation_playback_id):
+		if sync_playback:
+			_source_animationplayer.stop()
 		_source_animationplayer.play(current_animation_playback_id)
 	
 	if _retarget_animationplayer.has_animation(current_animation_playback_id):
+		if sync_playback:
+			_retarget_animationplayer.stop()
 		_retarget_animationplayer.play(current_animation_playback_id)
 
 
 func calculate_retargeting_data() -> bool:
 	if not _valid_setup():
 		return false
+		
+	_skeleton_scale_mod = 1.0;
+	
+	if source_skeleton_scale <= 0.0:
+		source_skeleton_scale = 1.0
+	if retarget_skeleton_scale <= 0.0:
+		retarget_skeleton_scale = 1.0
+	
+	_skeleton_scale_mod = source_skeleton_scale / retarget_skeleton_scale
 	
 	for source_skeleton_bone_inx in _source_skeleton.get_bone_count():
 	
 		var bone_name : String = _source_skeleton.get_bone_name(source_skeleton_bone_inx)
-	
+		
+		if _source_skeleton.get_bone_parent(source_skeleton_bone_inx) == -1:
+			_source_root_bone_inx = source_skeleton_bone_inx
+			_source_root_bone_name = bone_name
+		
 		if (source_rig_type == SOURCE_RIG_CUSTOM ) and (target_rig_type == TARGET_RIG_CUSTOM) and (not custom_bone_mapping.empty()):
 			if custom_bone_mapping.has(bone_name):
 				bone_name = custom_bone_mapping.get(bone_name, "")
@@ -141,8 +163,8 @@ func calculate_retargeting_data() -> bool:
 		var _source_bone_rest_rot : Quat = _source_bone_rest.basis.get_rotation_quat()
 		var _target_bone_rest_rot : Quat = _target_bone_rest.basis.get_rotation_quat()
 		
-		var position_offset_vector : Vector3 = _source_bone_rest_pos - _target_bone_rest_pos
-		var rotation_offset_quat : Quat = _target_bone_rest_rot.normalized().inverse() * _source_bone_rest_rot.normalized()		
+		var position_offset_vector : Vector3 = (_target_bone_rest_pos * _skeleton_scale_mod) - (_source_bone_rest_pos * _skeleton_scale_mod)
+		var rotation_offset_quat : Quat = _target_bone_rest_rot.normalized().inverse() * _source_bone_rest_rot.normalized()
 		var scale_offset_vector : Vector3 = _source_bone_rest.basis.get_scale() - _target_bone_rest.basis.get_scale()
 		
 		var od : Dictionary = {}
@@ -216,7 +238,6 @@ func retarget_skeleton_animations() -> void:
 
 
 func _add_missing_bones_in_animation_track(p_new_retargeted_animation : Animation) -> void:
-	
 	if not _valid_setup():
 		return
 	
@@ -318,6 +339,7 @@ func _retarget_animation_track(p_source_animation : Animation) -> Animation:
 				continue
 		
 		for _track_key_inx in new_retargeted_animation.track_get_key_count(_track_inx):
+			
 			if not keep_transform_bones.has(bone_name):
 				
 				var _keyframe_value_dict : Dictionary = new_retargeted_animation.track_get_key_value(_track_inx, _track_key_inx)
@@ -336,19 +358,17 @@ func _retarget_animation_track(p_source_animation : Animation) -> Animation:
 				var _new_key_quat : Quat = _key_quat;
 				var _new_key_scale : Vector3= _key_scale;
 				
-				if retarget_position:
-					if apply_position_correction and bone_name == correction_bone:
-						_new_key_origin = _key_origin + _origin_offset + position_correction
-					elif _retarget_skeleton.get_bone_parent(_retarget_skeleton.find_bone(bone_name)) == -1:
-						_new_key_origin = _key_origin * rescale_position
-					else:
-						_new_key_origin = _key_origin + _origin_offset
-				
-				if retarget_scale:
+				if retarget_scale or (bone_name == _source_root_bone_name and root_motion):
 					if apply_position_correction and bone_name == correction_bone:
 						_new_key_scale = _key_scale + _scale_offset + scale_correction
 					else:
 						_new_key_scale = _key_scale + _scale_offset
+				
+				if retarget_position or (bone_name == _source_root_bone_name and root_motion):
+					if apply_position_correction and bone_name == correction_bone:
+						_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset + position_correction
+					else:
+						_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset
 				
 				# BONE ROTATION
 				if retarget_rotation:
@@ -360,6 +380,10 @@ func _retarget_animation_track(p_source_animation : Animation) -> Animation:
 						_new_key_quat = (((_quat_offset * _key_quat).normalized()) * Quat(_rotation_correction_rad).normalized()).normalized()
 					else:
 						_new_key_quat = (_quat_offset * _key_quat).normalized()
+						
+				if (bone_name == _source_root_bone_name and fixate_in_place):
+					_new_key_origin.x = 0.0
+					_new_key_origin.z = 0.0
 				
 				_keyframe_value_dict["location"] = _new_key_origin
 				_keyframe_value_dict["rotation"] = _new_key_quat
@@ -404,7 +428,6 @@ func get_retarget_animationplayer_path() -> NodePath:
 	return retarget_animationplayer_node_path
 
 
-
 func set_export_directory(p_directory : String):
 	animation_export_directory = p_directory.strip_edges()
 
@@ -418,11 +441,13 @@ func set_animation_rename_prefix(p_prefix : String):
 func get_animation_rename_prefix() -> String:
 	return animation_rename_prefix
 
+
 func set_animation_rename_suffix(p_suffix : String):
 	animation_rename_suffix = p_suffix.strip_edges()
 
 func get_animation_rename_suffix() -> String:
 	return animation_rename_suffix
+
 
 func enable_correction_mode() -> void:
 	correction_mode = CORRECTION_MODE_ENABLED
@@ -431,14 +456,30 @@ func disable_correction_mode() -> void:
 	correction_mode = CORRECTION_MODE_DISABLED
 
 
+func set_sync_playback(p_enabled) -> void:
+	sync_playback = p_enabled
+	if sync_playback and _source_animationplayer and _retarget_animationplayer:
+		var current_animation_playback_id : String = _source_animationplayer.get_current_animation()
+		if current_animation_playback_id != "":
+			if _retarget_animationplayer.has_animation(current_animation_playback_id):
+				_source_animationplayer.stop()
+				_retarget_animationplayer.stop()
+				_source_animationplayer.play(current_animation_playback_id)
+				_retarget_animationplayer.play(current_animation_playback_id)
+
+func get_sync_playback() -> bool:
+	return sync_playback
+
+
 var retarget_mapping : Dictionary = {}
 
 var _source_skeleton : Skeleton
 var _source_animationplayer : AnimationPlayer
 var _retarget_skeleton : Skeleton
 var _retarget_animationplayer : AnimationPlayer
-
-
+var _source_root_bone_name : String
+var _source_root_bone_inx : int
+var _skeleton_scale_mod = 1.0
 var rescale_position : float = 1.0
 var correction_mode = CORRECTION_MODE_DISABLED
 
