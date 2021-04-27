@@ -30,13 +30,20 @@ Introduces a new Node Type that can be used to transfer Animation data authored 
 
 ## Installation
 
+### C++ Module
 1. Download and compile Godot from source and assure it runs on your hardware.
 See official Godot documentation for instructions how to [compile Godot from source](https://docs.godotengine.org/en/latest/development/compiling/index.html).
 2. Download repository branch for your Godot version ([Godot 4.x](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_4.x)/[Godot 3.x](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_3.x)) and unpack it.
-3. Move the unpacked "animation_retargeting" folder inside your Godot source modules folder.
+3. Create an "animation_retargeting" folder inside your Godot source modules folder and drop the unpacked repo content into it.
 Your path should end up as "godotsourcefolder/modules/animation_retargeting".
 4. Compile Godot from source again with the added AnimationRetargeting module.
 5. Inside Godot Editor search for "AnimationRetargeting" Node in the "AddNode" dialog.
+
+### GDScript Addon
+1. Download repository branch for your Godot version ([Godot 4.x_gdscript](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_4.x_gdscript)/[Godot 3.x_gdscript](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_3.x_gdscript)) and unpack it.
+2. Drop the unpacked repo "addon" folder into your Godot project folder.
+3. Active the addon inside the projectsettings menu.
+4. Inside Godot Editor search for "AnimationRetargeting" Node in the "AddNode" dialog.
 
 ## Setup | Usage
 
