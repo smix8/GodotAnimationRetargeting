@@ -47,8 +47,8 @@ export(bool) var retarget_scale  : bool = false
 export(bool) var root_motion = false
 export(bool) var fixate_in_place = false
 export(bool) var sync_playback = false setget set_sync_playback, get_sync_playback
-export(float) var source_skeleton_scale = 1.0
-export(float) var retarget_skeleton_scale = 1.0
+export(float) var source_skeleton_scale = 1.0 setget set_source_skeleton_scale, get_source_skeleton_scale
+export(float) var retarget_skeleton_scale = 1.0 setget set_retarget_skeleton_scale, get_retarget_skeleton_scale
 
 export(bool) var export_animations : bool = true
 export(bool) var export_animationplayer : bool = true
@@ -58,8 +58,8 @@ export(String, DIR) var animation_export_directory  = "res://" setget set_export
 export(String) var animation_rename_prefix = "" setget set_animation_rename_prefix, get_animation_rename_prefix
 export(String) var animation_rename_suffix = "" setget set_animation_rename_suffix, get_animation_rename_suffix
 
-export(int, "custom", "placeholder", "genesis3and8", "placeholder", "placeholder") var source_rig_type = SOURCE_RIG_CUSTOM
-export(int, "custom", "placeholder", "genesis3and8", "placeholder", "placeholder") var target_rig_type = TARGET_RIG_CUSTOM
+export(int, "custom", "placeholder", "genesis3and8", "placeholder", "placeholder") var source_rig_type = SOURCE_RIG_CUSTOM setget set_source_rig_type, get_source_rig_type
+export(int, "custom", "placeholder", "genesis3and8", "placeholder", "placeholder") var target_rig_type = TARGET_RIG_CUSTOM setget set_target_rig_type, get_target_rig_type
 
 export(Dictionary) var custom_bone_mapping = {} setget set_custom_bone_mapping, get_custom_bone_mapping
 export(Array) var ignore_bones = []
@@ -71,7 +71,7 @@ export(Vector3) var scale_correction = Vector3(0.0, 0.0, 0.0)
 
 
 func has_retargeting_data() -> bool:
-	return not retarget_mapping.empty()
+	return not retarget_mapping.empty() and not _calculate_retargeting_data
 
 
 func _valid_setup() -> bool:
@@ -126,15 +126,20 @@ func start_retargeting() -> void:
 func calculate_retargeting_data() -> bool:
 	if not _valid_setup():
 		return false
-		
-	_skeleton_scale_mod = 1.0;
+	if has_retargeting_data():
+		return true
 	
-	if source_skeleton_scale <= 0.0:
-		source_skeleton_scale = 1.0
-	if retarget_skeleton_scale <= 0.0:
-		retarget_skeleton_scale = 1.0
+	_source_path_animationplayer_to_skeleton = String(_source_animationplayer.get_path_to(_source_skeleton))
+	if _source_path_animationplayer_to_skeleton.begins_with("../"):
+		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("../","")
+	if _source_path_animationplayer_to_skeleton.begins_with("/"):
+		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("/","")
 	
-	_skeleton_scale_mod = source_skeleton_scale / retarget_skeleton_scale
+	_retarget_path_animationplayer_to_skeleton = String(_retarget_animationplayer.get_path_to(_retarget_skeleton))
+	if _retarget_path_animationplayer_to_skeleton.begins_with("../"):
+		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("../","")
+	if _retarget_path_animationplayer_to_skeleton.begins_with("/"):
+		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("/","")
 	
 	for source_skeleton_bone_inx in _source_skeleton.get_bone_count():
 	
@@ -151,8 +156,12 @@ func calculate_retargeting_data() -> bool:
 				custom_bone_mapping[bone_name] = "";
 		
 		var retarget_skeleton_bone_inx : int = _retarget_skeleton.find_bone(bone_name)
-		if retarget_skeleton_bone_inx < 0:
+		if retarget_skeleton_bone_inx == -1:
+			# bone not found in retarget skeleton
 			continue
+		if _retarget_skeleton.get_bone_parent(retarget_skeleton_bone_inx) == -1:
+			_retarget_root_bone_inx = retarget_skeleton_bone_inx
+			_retarget_root_bone_name = bone_name
 		
 		var _source_bone_rest : Transform = _source_skeleton.get_bone_rest(source_skeleton_bone_inx)
 		var _target_bone_rest : Transform = _retarget_skeleton.get_bone_rest(retarget_skeleton_bone_inx)
@@ -163,10 +172,26 @@ func calculate_retargeting_data() -> bool:
 		var _source_bone_rest_rot : Quat = _source_bone_rest.basis.get_rotation_quat()
 		var _target_bone_rest_rot : Quat = _target_bone_rest.basis.get_rotation_quat()
 		
-		var position_offset_vector : Vector3 = (_target_bone_rest_pos * _skeleton_scale_mod) - (_source_bone_rest_pos * _skeleton_scale_mod)
+		var position_offset_vector : Vector3
+		
+		_root_motion_scale = source_skeleton_scale / retarget_skeleton_scale
+		
+		if retarget_skeleton_scale > source_skeleton_scale:
+			_skeleton_scale_mod = retarget_skeleton_scale / source_skeleton_scale
+			position_offset_vector = (_target_bone_rest_pos) - ((_source_bone_rest_pos * retarget_skeleton_scale) / _skeleton_scale_mod)
+		
+		elif retarget_skeleton_scale < source_skeleton_scale:
+			_skeleton_scale_mod = _root_motion_scale
+			position_offset_vector = (_target_bone_rest_pos) - ((_source_bone_rest_pos * retarget_skeleton_scale) * _skeleton_scale_mod)
+		
+		else:
+			_root_motion_scale = 1.0
+			_skeleton_scale_mod = 1.0
+			position_offset_vector = _target_bone_rest_pos - _source_bone_rest_pos
+		
 		var rotation_offset_quat : Quat = _target_bone_rest_rot.normalized().inverse() * _source_bone_rest_rot.normalized()
 		var scale_offset_vector : Vector3 = _source_bone_rest.basis.get_scale() - _target_bone_rest.basis.get_scale()
-		
+
 		var od : Dictionary = {}
 		od["origin_offset"] = position_offset_vector
 		od["quat_offset"] = rotation_offset_quat
@@ -174,6 +199,8 @@ func calculate_retargeting_data() -> bool:
 		retarget_mapping[bone_name] = od
 	
 	set_custom_bone_mapping(custom_bone_mapping)
+	
+	_calculate_retargeting_data = false
 	
 	if retarget_mapping.empty():
 		return false
@@ -241,6 +268,25 @@ func _add_missing_bones_in_animation_track(p_new_retargeted_animation : Animatio
 	if not _valid_setup():
 		return
 	
+	var  retarget_skeleton_string_path : String = ""
+	
+	if _source_path_animationplayer_to_skeleton != _retarget_path_animationplayer_to_skeleton:
+		for _track_inx in p_new_retargeted_animation.get_track_count():
+			retarget_skeleton_string_path = p_new_retargeted_animation.track_get_path(_track_inx)
+			if retarget_skeleton_string_path.begins_with(_source_path_animationplayer_to_skeleton):
+				retarget_skeleton_string_path = retarget_skeleton_string_path.replace(_source_path_animationplayer_to_skeleton, _retarget_path_animationplayer_to_skeleton)
+				var subname_count : int = p_new_retargeted_animation.track_get_path(_track_inx).get_subname_count()
+				if subname_count > 0:
+					var bone_name : String = p_new_retargeted_animation.track_get_path(_track_inx).get_subname(subname_count - 1)
+					if target_rig_type == TARGET_RIG_CUSTOM and not custom_bone_mapping.empty():
+						if bone_name in custom_bone_mapping:
+							var _bone_remapped : String = custom_bone_mapping.get(bone_name)
+							if _bone_remapped == "":
+								_bone_remapped = "bone_missing_mapping"
+							retarget_skeleton_string_path = retarget_skeleton_string_path.replace(bone_name, _bone_remapped)
+				
+				p_new_retargeted_animation.track_set_path(_track_inx, NodePath(retarget_skeleton_string_path))
+	
 	var bone_keys : Array = retarget_mapping.keys()
 	
 	if target_rig_type == TARGET_RIG_CUSTOM and not custom_bone_mapping.empty():
@@ -250,11 +296,12 @@ func _add_missing_bones_in_animation_track(p_new_retargeted_animation : Animatio
 		bone_keys = genesis3and8_bone_mapping.keys()
 	
 	var found_bone_track : bool = false
-	var  retarget_skeleton_string_path : String = ""
+	var _searching_bone_name : String = ""
 	
 	for bone_key_inx in bone_keys.size():
-		
-		var searching_bone_name : String = bone_keys[bone_key_inx]
+		_searching_bone_name = bone_keys[bone_key_inx]
+		if _searching_bone_name == "":
+			continue
 		
 		found_bone_track = false
 		
@@ -265,35 +312,50 @@ func _add_missing_bones_in_animation_track(p_new_retargeted_animation : Animatio
 			if subname_count < 1:
 				continue
 			var bone_name : String = p_new_retargeted_animation.track_get_path(_track_inx).get_subname(subname_count - 1)
-			if bone_name == searching_bone_name:
+			if bone_name == _searching_bone_name:
 				found_bone_track = true
 				retarget_skeleton_string_path = p_new_retargeted_animation.track_get_path(_track_inx)
-				var bone_resource_name : String = ":" + bone_name
-				retarget_skeleton_string_path = retarget_skeleton_string_path.replace(bone_resource_name, "")
+				if retarget_skeleton_string_path.begins_with(_source_path_animationplayer_to_skeleton):
+					retarget_skeleton_string_path = retarget_skeleton_string_path.replace(_source_path_animationplayer_to_skeleton, _retarget_path_animationplayer_to_skeleton)
+					p_new_retargeted_animation.track_set_path(_track_inx, NodePath(retarget_skeleton_string_path))
 				break
 		
 		if not found_bone_track:
 			
 			var new_track_inx : int = p_new_retargeted_animation.get_track_count() - 1
 			if new_track_inx > 0:
-				var bone_stringpath : String = retarget_skeleton_string_path + ":" + searching_bone_name
+				var bone_stringpath : String = _retarget_path_animationplayer_to_skeleton + ":" + _searching_bone_name
 				
 				var new_animation_track_bone_nodepath : NodePath = NodePath(bone_stringpath)
 				var new_translation : Vector3 = Vector3(0.0, 0.0, 0.0);
 				var new_rotation_quat : Quat = Quat();
 				var new_scale : Vector3 = Vector3(1.0, 1.0, 1.0);
 				
-				p_new_retargeted_animation.add_track(Animation.TrackType.TYPE_TRANSFORM, new_track_inx)
+				p_new_retargeted_animation.add_track(Animation.TYPE_TRANSFORM, new_track_inx)
 				p_new_retargeted_animation.track_set_path(new_track_inx, new_animation_track_bone_nodepath)
 				p_new_retargeted_animation.transform_track_insert_key(new_track_inx, 0.0, new_translation, new_rotation_quat, new_scale)
 				p_new_retargeted_animation.transform_track_insert_key(new_track_inx, p_new_retargeted_animation.get_length(), new_translation, new_rotation_quat, new_scale)
-
-
-func set_custom_bone_mapping(p_custom_bone_mapping : Dictionary) -> void:
-	custom_bone_mapping = p_custom_bone_mapping
-
-func get_custom_bone_mapping() -> Dictionary:
-	return custom_bone_mapping
+	
+	# clean old transform tracks from source skeleton
+	# can't delete in same loop due to index shift so one by one
+	var _trackpath : String = ""
+	var _deleting_tracks : bool = true
+	var _deleted_track : bool = false
+	while _deleting_tracks:
+		_deleted_track = false
+		for _track_inx in p_new_retargeted_animation.get_track_count():
+			if not p_new_retargeted_animation.track_get_type(_track_inx) == Animation.TYPE_TRANSFORM:
+				continue
+			_trackpath = p_new_retargeted_animation.track_get_path(_track_inx)
+			if not _trackpath.begins_with(_retarget_path_animationplayer_to_skeleton):
+				p_new_retargeted_animation.remove_track(_track_inx)
+				_deleted_track = true
+				break
+			elif "bone_missing_mapping" in _trackpath:
+				p_new_retargeted_animation.remove_track(_track_inx)
+				_deleted_track = true
+				break
+		_deleting_tracks = _deleted_track
 
 
 func _retarget_animation_track(p_source_animation : Animation) -> Animation:
@@ -323,8 +385,9 @@ func _retarget_animation_track(p_source_animation : Animation) -> Animation:
 		
 		var b : String = new_retargeted_animation.track_get_path(_track_inx).get_subname(subname_count - 1)
 		
-		if target_rig_type == TARGET_RIG_CUSTOM:
-			pass
+		if target_rig_type == TARGET_RIG_CUSTOM and not custom_bone_mapping.empty():
+			if not b in custom_bone_mapping.values():
+				continue
 		elif target_rig_type == TARGET_RIG_RIGIFY2:
 			if not rigify2_bone_mapping.has(b):
 				continue
@@ -358,17 +421,23 @@ func _retarget_animation_track(p_source_animation : Animation) -> Animation:
 				var _new_key_quat : Quat = _key_quat;
 				var _new_key_scale : Vector3= _key_scale;
 				
-				if retarget_scale or (bone_name == _source_root_bone_name and root_motion):
+				if retarget_scale or (bone_name == _retarget_root_bone_name and root_motion):
 					if apply_position_correction and bone_name == correction_bone:
 						_new_key_scale = _key_scale + _scale_offset + scale_correction
 					else:
 						_new_key_scale = _key_scale + _scale_offset
 				
-				if retarget_position or (bone_name == _source_root_bone_name and root_motion):
-					if apply_position_correction and bone_name == correction_bone:
-						_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset + position_correction
+				if retarget_position or (bone_name == _retarget_root_bone_name and root_motion):
+					if bone_name == _retarget_root_bone_name and root_motion:
+						if apply_position_correction and bone_name == correction_bone:
+							_new_key_origin = (_key_origin * _root_motion_scale) + _origin_offset + position_correction
+						else:
+							_new_key_origin = (_key_origin * _root_motion_scale) + _origin_offset
 					else:
-						_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset
+						if apply_position_correction and bone_name == correction_bone:
+							_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset + position_correction
+						else:
+							_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset
 				
 				# BONE ROTATION
 				if retarget_rotation:
@@ -381,7 +450,7 @@ func _retarget_animation_track(p_source_animation : Animation) -> Animation:
 					else:
 						_new_key_quat = (_quat_offset * _key_quat).normalized()
 						
-				if (bone_name == _source_root_bone_name and fixate_in_place):
+				if (bone_name == _retarget_root_bone_name and fixate_in_place):
 					_new_key_origin.x = 0.0
 					_new_key_origin.z = 0.0
 				
@@ -398,6 +467,7 @@ func set_source_skeleton_path(p_source_skeleton_node_path : NodePath) -> void:
 	retarget_mapping.clear()
 	_source_skeleton = null
 	source_skeleton_node_path = p_source_skeleton_node_path
+	_calculate_retargeting_data = true
 
 func get_source_skeleton_path() -> NodePath:
 	return source_skeleton_node_path
@@ -407,6 +477,7 @@ func set_retarget_skeleton_path(p_retarget_skeleton_node_path : NodePath) -> voi
 	retarget_mapping.clear()
 	_retarget_skeleton = null
 	retarget_skeleton_node_path = p_retarget_skeleton_node_path
+	_calculate_retargeting_data = true
 
 func get_retarget_skeleton_path() -> NodePath:
 	return retarget_skeleton_node_path
@@ -456,6 +527,51 @@ func disable_correction_mode() -> void:
 	correction_mode = CORRECTION_MODE_DISABLED
 
 
+func set_source_skeleton_scale(p_source_skeleton_scale : float) -> void:
+	source_skeleton_scale = p_source_skeleton_scale
+	if source_skeleton_scale <= 0.0:
+		source_skeleton_scale = 1.0
+	_calculate_retargeting_data = true
+
+func get_source_skeleton_scale() -> float:
+	return source_skeleton_scale
+
+
+func set_retarget_skeleton_scale(p_retarget_skeleton_scale : float) -> void:
+	retarget_skeleton_scale = p_retarget_skeleton_scale
+	if retarget_skeleton_scale <= 0.0:
+		retarget_skeleton_scale = 1.0
+	_calculate_retargeting_data = true
+
+func get_retarget_skeleton_scale() -> float:
+	return retarget_skeleton_scale
+
+
+func set_source_rig_type(p_source_rig_type : int) -> void:
+	source_rig_type = p_source_rig_type
+	_calculate_retargeting_data = true
+
+func get_source_rig_type() -> int:
+	return source_rig_type
+
+
+func set_target_rig_type(p_target_rig_type : int) -> void:
+	target_rig_type = p_target_rig_type
+	_calculate_retargeting_data = true
+
+func get_target_rig_type() -> int:
+	return target_rig_type
+
+
+func set_custom_bone_mapping(p_custom_bone_mapping : Dictionary) -> void:
+	if custom_bone_mapping != p_custom_bone_mapping:
+		_calculate_retargeting_data = true
+	custom_bone_mapping = p_custom_bone_mapping
+
+func get_custom_bone_mapping() -> Dictionary:
+	return custom_bone_mapping
+
+
 func set_sync_playback(p_enabled) -> void:
 	sync_playback = p_enabled
 	if sync_playback and _source_animationplayer and _retarget_animationplayer:
@@ -479,8 +595,13 @@ var _retarget_skeleton : Skeleton
 var _retarget_animationplayer : AnimationPlayer
 var _source_root_bone_name : String
 var _source_root_bone_inx : int
-var _skeleton_scale_mod = 1.0
-var rescale_position : float = 1.0
+var _retarget_root_bone_name : String
+var _retarget_root_bone_inx : int
+var _skeleton_scale_mod : float = 1.0
+var _root_motion_scale : float = 1.0
+var _source_path_animationplayer_to_skeleton : String = ""
+var _retarget_path_animationplayer_to_skeleton : String = ""
+var _calculate_retargeting_data : bool = true
 var correction_mode = CORRECTION_MODE_DISABLED
 
 var keep_transform_bones : Dictionary = {}
