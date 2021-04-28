@@ -104,17 +104,22 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 	if (has_retargeting_data()) {
 		return true;
 	}
-	
-	_skeleton_scale_mod = 1.0;
 
-	if (source_skeleton_scale <= 0.0) {
-		source_skeleton_scale = 1.0;
+	_source_path_animationplayer_to_skeleton = String(_source_animationplayer->get_path_to(_source_skeleton));
+	if (_source_path_animationplayer_to_skeleton.begins_with("../")) {
+		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("../", "");
 	}
-	if (retarget_skeleton_scale <= 0.0) {
-		retarget_skeleton_scale = 1.0;
+	if (_source_path_animationplayer_to_skeleton.begins_with("/")) {
+		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("/", "");
 	}
-	_skeleton_scale_mod = source_skeleton_scale / retarget_skeleton_scale;
 
+	_retarget_path_animationplayer_to_skeleton = String(_retarget_animationplayer->get_path_to(_retarget_skeleton));
+	if (_retarget_path_animationplayer_to_skeleton.begins_with("../")) {
+		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("../", "");
+	}
+	if (_retarget_path_animationplayer_to_skeleton.begins_with("/")) {
+		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("/", "");
+	}
 
 	for (int source_skeleton_bone_inx = 0; source_skeleton_bone_inx < _source_skeleton->get_bone_count(); source_skeleton_bone_inx++) {
 
@@ -126,7 +131,7 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 		}
 
 		if (source_rig_type == AnimationRetargeting::SOURCE_RIG_CUSTOM && target_rig_type == AnimationRetargeting::TARGET_RIG_CUSTOM && !custom_bone_mapping.empty()) {
-			if (custom_bone_mapping.has(bone_name)) {				
+			if (custom_bone_mapping.has(bone_name)) {
 				bone_name = custom_bone_mapping.get(bone_name, StringName());
 			} else {
 				custom_bone_mapping[bone_name] = "";
@@ -136,6 +141,10 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 		int retarget_skeleton_bone_inx = _retarget_skeleton->find_bone(bone_name);
 		if (retarget_skeleton_bone_inx < 0) {			
 			continue;
+		}
+		if (_retarget_skeleton->get_bone_parent(retarget_skeleton_bone_inx) == -1) {
+			_retarget_root_bone_inx = retarget_skeleton_bone_inx;
+			_retarget_root_bone_name = bone_name;
 		}
 
 		Transform _source_bone_rest = _source_skeleton->get_bone_rest(source_skeleton_bone_inx);		
@@ -147,10 +156,24 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 		Quat _source_bone_rest_rot = _source_bone_rest.basis.get_rotation_quat();
 		Quat _target_bone_rest_rot = _target_bone_rest.basis.get_rotation_quat();
 
-		Vector3 position_offset_vector = (_target_bone_rest_pos * _skeleton_scale_mod) - (_source_bone_rest_pos * _skeleton_scale_mod);
+		Vector3 position_offset_vector;
+
+		_root_motion_scale = source_skeleton_scale / retarget_skeleton_scale;
+
+		if (retarget_skeleton_scale > source_skeleton_scale) {
+			_skeleton_scale_mod = retarget_skeleton_scale / source_skeleton_scale;
+			position_offset_vector = (_target_bone_rest_pos) - ((_source_bone_rest_pos * retarget_skeleton_scale) / _skeleton_scale_mod);
+		} else if (retarget_skeleton_scale < source_skeleton_scale) {
+				_skeleton_scale_mod = _root_motion_scale;
+				position_offset_vector = (_target_bone_rest_pos) - ((_source_bone_rest_pos * retarget_skeleton_scale) * _skeleton_scale_mod);
+		} else {
+			_root_motion_scale = 1.0;
+			_skeleton_scale_mod = 1.0;
+			position_offset_vector = _target_bone_rest_pos - _source_bone_rest_pos;
+		}
+
 		Quat rotation_offset_quat = _target_bone_rest_rot.normalized().inverse() * _source_bone_rest_rot.normalized();
 		Vector3 scale_offset_vector = _source_bone_rest.basis.get_scale() - _target_bone_rest.basis.get_scale();
-
 
 		Dictionary od;
 		od["origin_offset"] = position_offset_vector;
@@ -160,6 +183,8 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 	}
 
 	set_custom_bone_mapping(custom_bone_mapping);
+
+	_calculate_retargeting_data = false;
 
 	if (retarget_mapping.empty()) {
 		return false;
@@ -246,10 +271,34 @@ void AnimationRetargeting::retarget_skeleton_animations() {
 }
 
 void AnimationRetargeting::_add_missing_bones_in_animation_track(Ref<Animation> &p_new_retargeted_animation) {
-	ERR_FAIL_COND_MSG(_source_skeleton == nullptr, vformat("Missing Source Skeleton, did you pick the wrong nodepath?"));
-	ERR_FAIL_COND_MSG(_source_animationplayer == nullptr, vformat("Missing Source AnimationPlayer, did you pick the wrong nodepath?"));
-	ERR_FAIL_COND_MSG(_retarget_skeleton == nullptr, vformat("Missing Retarget Skeleton, did you pick the wrong nodepath?"));
-	ERR_FAIL_COND_MSG(retarget_mapping.empty(), vformat("Missing retargeting data"));
+	if (!_valid_setup()) {
+		return;
+	}
+
+	String retarget_skeleton_string_path = "";
+
+	if (_source_path_animationplayer_to_skeleton != _retarget_path_animationplayer_to_skeleton) {
+		for (int _track_inx = 0; _track_inx < p_new_retargeted_animation->get_track_count(); _track_inx++) {
+			retarget_skeleton_string_path = p_new_retargeted_animation->track_get_path(_track_inx);
+			if (retarget_skeleton_string_path.begins_with(_source_path_animationplayer_to_skeleton)) {
+				retarget_skeleton_string_path = retarget_skeleton_string_path.replace(_source_path_animationplayer_to_skeleton, _retarget_path_animationplayer_to_skeleton);
+				int subname_count = p_new_retargeted_animation->track_get_path(_track_inx).get_subname_count();
+				if (subname_count > 0) {
+					String bone_name = p_new_retargeted_animation->track_get_path(_track_inx).get_subname(subname_count - 1);
+					if (target_rig_type == AnimationRetargeting::TARGET_RIG_CUSTOM && !custom_bone_mapping.empty()) {
+						if (custom_bone_mapping.has(bone_name)) {
+							String _bone_remapped = custom_bone_mapping.get(bone_name, String());
+							if (_bone_remapped == "") {
+								_bone_remapped = "bone_missing_mapping";
+							}
+							retarget_skeleton_string_path = retarget_skeleton_string_path.replace(bone_name, _bone_remapped);
+						}
+					}					
+				}
+				p_new_retargeted_animation->track_set_path(_track_inx, NodePath(retarget_skeleton_string_path));
+			}
+		}
+	}
 
 	Array bone_keys = retarget_mapping.keys();
 
@@ -261,13 +310,17 @@ void AnimationRetargeting::_add_missing_bones_in_animation_track(Ref<Animation> 
 	}
 
 	bool found_bone_track = false;
-	String retarget_skeleton_string_path = "";
+	String _searching_bone_name = "";
 
 	for (int bone_key_inx = 0; bone_key_inx < bone_keys.size(); bone_key_inx++) {
 
-		String searching_bone_name = bone_keys[bone_key_inx];
-		found_bone_track = false;
+		_searching_bone_name = bone_keys[bone_key_inx];
+		if (_searching_bone_name == "") {
+			continue;
+		}
 
+		found_bone_track = false;
+		
 		for (int _track_inx = 0; _track_inx < p_new_retargeted_animation->get_track_count(); _track_inx++) {
 			if (!p_new_retargeted_animation->track_get_type(_track_inx) == Animation::TYPE_TRANSFORM) {
 				continue;
@@ -278,31 +331,59 @@ void AnimationRetargeting::_add_missing_bones_in_animation_track(Ref<Animation> 
 			}
 			String bone_name = p_new_retargeted_animation->track_get_path(_track_inx).get_subname(subname_count - 1);
 
-			if (bone_name == searching_bone_name) {
+			if (bone_name == _searching_bone_name) {
 				found_bone_track = true;
 				retarget_skeleton_string_path = p_new_retargeted_animation->track_get_path(_track_inx);
-				String bone_resource_name = ":" + bone_name;
-				retarget_skeleton_string_path = retarget_skeleton_string_path.replace(bone_resource_name, "");
+				if (retarget_skeleton_string_path.begins_with(_source_path_animationplayer_to_skeleton)) {
+					retarget_skeleton_string_path = retarget_skeleton_string_path.replace(_source_path_animationplayer_to_skeleton, _retarget_path_animationplayer_to_skeleton);
+					p_new_retargeted_animation->track_set_path(_track_inx, NodePath(retarget_skeleton_string_path));
+				}
 				break;
 			}
 		}
-
+		
 		if (!found_bone_track) {
 			int new_track_inx = p_new_retargeted_animation->get_track_count() - 1;
 			if (new_track_inx > 0) {
-				String bone_stringpath = retarget_skeleton_string_path + ":" + searching_bone_name;
+				String bone_stringpath = _retarget_path_animationplayer_to_skeleton + ":" + _searching_bone_name;
 
 				NodePath new_animation_track_bone_nodepath = NodePath(bone_stringpath);
 				Vector3 new_translation = Vector3(0.0, 0.0, 0.0);
 				Quat new_rotation_quat = Quat();
 				Vector3 new_scale = Vector3(1.0, 1.0, 1.0);
 
-				p_new_retargeted_animation->add_track(Animation::TrackType::TYPE_TRANSFORM, new_track_inx);
+				p_new_retargeted_animation->add_track(Animation::TYPE_TRANSFORM, new_track_inx);
 				p_new_retargeted_animation->track_set_path(new_track_inx, new_animation_track_bone_nodepath);
 				p_new_retargeted_animation->transform_track_insert_key(new_track_inx, 0.0, new_translation, new_rotation_quat, new_scale);
 				p_new_retargeted_animation->transform_track_insert_key(new_track_inx, p_new_retargeted_animation->get_length(), new_translation, new_rotation_quat, new_scale);
 			}
 		}
+	}
+
+	// clean old transform tracks from source skeleton
+	// can't delete in same loop due to index shift so one by one
+	String _trackpath = "";
+	bool _deleting_tracks = true;
+	bool _deleted_track = false;
+	while (_deleting_tracks) {
+		_deleted_track = false;
+		for (int _track_inx = 0; _track_inx < p_new_retargeted_animation->get_track_count(); _track_inx++) {
+			if (_deleted_track == true) {
+				continue;
+			}
+			if (!p_new_retargeted_animation->track_get_type(_track_inx) == Animation::TYPE_TRANSFORM) {
+				continue;
+			}
+			_trackpath = String(p_new_retargeted_animation->track_get_path(_track_inx));
+			if (!_trackpath.begins_with(_retarget_path_animationplayer_to_skeleton)) {
+				p_new_retargeted_animation->remove_track(_track_inx);
+				_deleted_track = true;
+			} else if (_trackpath.find("bone_missing_mapping") != -1) {	
+				p_new_retargeted_animation->remove_track(_track_inx);
+				_deleted_track = true;
+			}
+		}
+		_deleting_tracks = _deleted_track;
 	}
 }
 
@@ -349,30 +430,19 @@ Ref<Animation> AnimationRetargeting::_retarget_animation_track(Ref<Animation> &p
 		// workaround for DICTIONARY STRINGNAME != STRING HASH compare issue
 		// https://github.com/godotengine/godot/issues/44241
 
-		switch (target_rig_type) {
-			case AnimationRetargeting::TARGET_RIG_CUSTOM:
-				break;
-			case AnimationRetargeting::TARGET_RIG_RIGIFY2:
-				if (!rigify2_bone_mapping.has(b)) {
-					continue;
-				};
-				break;
-			case AnimationRetargeting::TARGET_RIG_GENESIS3AND8:
-				if (!genesis3and8_bone_mapping.has(b)) {
-					continue;
-				};
-				break;
-			case AnimationRetargeting::TARGET_RIG_3DSMAX:
-				if (!max3ds_bone_mapping.has(b)) {
-					continue;
-				};
-				break;
-			case AnimationRetargeting::TARGET_RIG_MAKEHUMAN:
-				if (!makehuman_bone_mapping.has(b)) {
-					continue;
-				};
-				break;
-		};
+		if ((target_rig_type == AnimationRetargeting::TARGET_RIG_CUSTOM) && !custom_bone_mapping.empty()) {
+			if (!custom_bone_mapping.values().has(b)) {
+				continue;
+			}
+		} else if ((target_rig_type == AnimationRetargeting::TARGET_RIG_RIGIFY2) && !rigify2_bone_mapping.has(b)) {
+			continue;
+		} else if ((target_rig_type == AnimationRetargeting::TARGET_RIG_GENESIS3AND8) && !genesis3and8_bone_mapping.has(b)) {
+			continue;
+		} else if ((target_rig_type == AnimationRetargeting::TARGET_RIG_3DSMAX) && !max3ds_bone_mapping.has(b)) {
+			continue;
+		} else if ((target_rig_type == AnimationRetargeting::TARGET_RIG_MAKEHUMAN) && !makehuman_bone_mapping.has(b)) {
+			continue;
+		}
 		
 		for (int _track_key_inx = 0; _track_key_inx < new_retargeted_animation->track_get_key_count(_track_inx); _track_key_inx++) {
 			
@@ -392,7 +462,7 @@ Ref<Animation> AnimationRetargeting::_retarget_animation_track(Ref<Animation> &p
 			Quat _new_key_quat = _key_quat;
 			Vector3 _new_key_scale = _key_scale;
 
-			if (retarget_scale) {
+			if ((retarget_scale) || ((bone_name == _retarget_root_bone_name) && root_motion)) {
 				if (apply_position_correction && bone_name == correction_bone) {
 					_new_key_scale = _key_scale + _scale_offset + scale_correction;
 				} else {
@@ -400,11 +470,19 @@ Ref<Animation> AnimationRetargeting::_retarget_animation_track(Ref<Animation> &p
 				}
 			}
 
-			if ((retarget_position) || ((bone_name == _source_root_bone_name) && root_motion)) {
-				if (apply_position_correction && bone_name == correction_bone) {
-					_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset + position_correction;
+			if ((retarget_position) || ((bone_name == _retarget_root_bone_name) && root_motion)) {
+				if ((bone_name == _retarget_root_bone_name) && root_motion) {
+					if (apply_position_correction && bone_name == correction_bone) {
+						_new_key_origin = (_key_origin * _root_motion_scale) + _origin_offset + position_correction;
+					} else {
+						_new_key_origin = (_key_origin * _root_motion_scale) + _origin_offset;
+					}
 				} else {
-					_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset;
+					if (apply_position_correction && bone_name == correction_bone) {
+						_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset + position_correction;
+					} else {
+						_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset;
+					}
 				}
 			}
 
@@ -422,7 +500,7 @@ Ref<Animation> AnimationRetargeting::_retarget_animation_track(Ref<Animation> &p
 				}
 			}
 
-			if (bone_name == _source_root_bone_name && fixate_in_place) {
+			if ((bone_name == _retarget_root_bone_name) && fixate_in_place) {
 				_new_key_origin.x = 0.0;
 				_new_key_origin.z = 0.0;
 			}

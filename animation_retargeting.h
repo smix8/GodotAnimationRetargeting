@@ -227,9 +227,15 @@ class AnimationRetargeting : public Node {
 	private:
 
 		int _source_root_bone_inx = -1;
-		StringName _source_root_bone_name = "";		
+		StringName _source_root_bone_name = "";
+		int _retarget_root_bone_inx = -1;
+		StringName _retarget_root_bone_name = "";
 		double _skeleton_scale_mod = 1.0;
-		bool _calculate_retargeting_data = true;
+		double _root_motion_scale = 1.0;
+		String _source_path_animationplayer_to_skeleton = "";
+		String _retarget_path_animationplayer_to_skeleton = "";	
+		bool _calculate_retargeting_data = true;	
+
 		bool _valid_setup();
 		Ref<Animation> _retarget_animation_track(Ref<Animation> &p_source_animation);
 		void _add_missing_bones_in_animation_track(Ref<Animation> &p_new_retargeted_animation);
