@@ -132,13 +132,17 @@ func calculate_retargeting_data() -> bool:
 	_source_path_animationplayer_to_skeleton = String(_source_animationplayer.get_path_to(_source_skeleton))
 	if _source_path_animationplayer_to_skeleton.begins_with("../"):
 		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("../","")
-	if _source_path_animationplayer_to_skeleton.begins_with("/"):
+	elif _source_path_animationplayer_to_skeleton.begins_with(".."): # parent node is skeleton
+		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("..",".")
+	elif _source_path_animationplayer_to_skeleton.begins_with("/"):
 		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("/","")
 	
 	_retarget_path_animationplayer_to_skeleton = String(_retarget_animationplayer.get_path_to(_retarget_skeleton))
 	if _retarget_path_animationplayer_to_skeleton.begins_with("../"):
 		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("../","")
-	if _retarget_path_animationplayer_to_skeleton.begins_with("/"):
+	elif _retarget_path_animationplayer_to_skeleton.begins_with(".."):
+		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("..",".")
+	elif _retarget_path_animationplayer_to_skeleton.begins_with("/"):
 		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("/","")
 	
 	for source_skeleton_bone_inx in _source_skeleton.get_bone_count():
