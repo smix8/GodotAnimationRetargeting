@@ -64,10 +64,10 @@ export(int, "custom", "placeholder", "genesis3and8", "placeholder", "placeholder
 export(Dictionary) var custom_bone_mapping = {} setget set_custom_bone_mapping, get_custom_bone_mapping
 export(Array) var ignore_bones = []
 
-export(String) var correction_bone : String = ""
-export(Vector3) var position_correction = Vector3(0.0, 0.0, 0.0)
-export(Vector3) var rotation_correction = Vector3(0.0, 0.0, 0.0)
-export(Vector3) var scale_correction = Vector3(0.0, 0.0, 0.0)
+export(String) var correction_bone : String = "" setget set_correction_bone, get_correction_bone
+export(Vector3) var position_correction = Vector3(0.0, 0.0, 0.0) setget set_position_correction, get_position_correction
+export(Vector3) var rotation_correction = Vector3(0.0, 0.0, 0.0) setget set_rotation_correction, get_rotation_correction
+export(Vector3) var scale_correction = Vector3(0.0, 0.0, 0.0) setget set_scale_correction, get_scale_correction
 
 
 func has_retargeting_data() -> bool:
@@ -89,9 +89,9 @@ func _valid_setup() -> bool:
 		retarget_mapping.clear()
 		return false
 	if retarget_mode == RETARGET_MODE_CURRENT_ANIMATION:
-		var current_animation_playback_id : String = _source_animationplayer.get_current_animation()
+		var current_animation_playback_id : String = _source_animationplayer.get_assigned_animation()
 		if current_animation_playback_id == "":
-			print_debug("Failed to get playing Animation from AnimationPlayer. Animation needs to play currently or else AnimationPlayer returns an empty animation_id.")
+			print_debug("Failed to get assigned Animation from AnimationPlayer. AnimationTrack must be loaded in Editor or Animation needs to play currently.")
 			return false
 	return true
 
@@ -107,7 +107,7 @@ func start_retargeting() -> void:
 		_retarget_skeleton.set_bone_custom_pose(bone_inx, Transform())
 		_retarget_skeleton.set_bone_pose(bone_inx, Transform())
 	
-	var current_animation_playback_id : String = _source_animationplayer.get_current_animation()
+	var current_animation_playback_id : String = _source_animationplayer.get_assigned_animation()
 	
 	if calculate_retargeting_data():
 		retarget_skeleton_animations()
@@ -128,7 +128,7 @@ func calculate_retargeting_data() -> bool:
 		return false
 	if has_retargeting_data():
 		return true
-	
+		
 	_source_path_animationplayer_to_skeleton = String(_source_animationplayer.get_path_to(_source_skeleton))
 	if _source_path_animationplayer_to_skeleton.begins_with("../"):
 		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("../","")
@@ -223,8 +223,8 @@ func retarget_skeleton_animations() -> void:
 	if export_animationplayer:
 		new_animationplayer = AnimationPlayer.new()
 	
-	var playing_source_animation_id : String = _source_animationplayer.get_current_animation()
-	var playing_retarget_animation_id : String = _retarget_animationplayer.get_current_animation()
+	var playing_source_animation_id : String = _source_animationplayer.get_assigned_animation()
+	var playing_retarget_animation_id : String = _retarget_animationplayer.get_assigned_animation()
 	
 	var animation_list : Array = _source_animationplayer.get_animation_list()
 	
@@ -232,7 +232,7 @@ func retarget_skeleton_animations() -> void:
 		for animation_id in animation_list:
 			if not _source_animationplayer.has_animation(animation_id):
 				continue
-			if retarget_mode == RETARGET_MODE_CURRENT_ANIMATION and _source_animationplayer.get_current_animation() != animation_id:
+			if retarget_mode == RETARGET_MODE_CURRENT_ANIMATION and _source_animationplayer.get_assigned_animation() != animation_id:
 				continue
 			var source_animation : Animation = _source_animationplayer.get_animation(animation_id)
 			
@@ -372,8 +372,6 @@ func _retarget_animation_track(p_source_animation : Animation) -> Animation:
 	
 	_add_missing_bones_in_animation_track(new_retargeted_animation)
 	
-	var apply_position_correction : bool = _retarget_skeleton.find_bone(correction_bone) != -1
-	
 	for _track_inx in new_retargeted_animation.get_track_count():
 		
 		if not new_retargeted_animation.track_get_type(_track_inx) == Animation.TYPE_TRANSFORM:
@@ -426,26 +424,26 @@ func _retarget_animation_track(p_source_animation : Animation) -> Animation:
 				var _new_key_scale : Vector3= _key_scale;
 				
 				if retarget_scale or (bone_name == _retarget_root_bone_name and root_motion):
-					if apply_position_correction and bone_name == correction_bone:
+					if bone_name == correction_bone:
 						_new_key_scale = _key_scale + _scale_offset + scale_correction
 					else:
 						_new_key_scale = _key_scale + _scale_offset
 				
 				if retarget_position or (bone_name == _retarget_root_bone_name and root_motion):
 					if bone_name == _retarget_root_bone_name and root_motion:
-						if apply_position_correction and bone_name == correction_bone:
+						if bone_name == correction_bone:
 							_new_key_origin = (_key_origin * _root_motion_scale) + _origin_offset + position_correction
 						else:
 							_new_key_origin = (_key_origin * _root_motion_scale) + _origin_offset
 					else:
-						if apply_position_correction and bone_name == correction_bone:
+						if bone_name == correction_bone:
 							_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset + position_correction
 						else:
 							_new_key_origin = (_key_origin * _skeleton_scale_mod) + _origin_offset
 				
 				# BONE ROTATION
-				if retarget_rotation:
-					if apply_position_correction and bone_name == correction_bone:
+				if retarget_rotation or (bone_name == _retarget_root_bone_name and root_motion):
+					if bone_name == correction_bone:
 						var _rotation_correction_rad : Vector3;
 						_rotation_correction_rad.x = deg2rad(rotation_correction.x)
 						_rotation_correction_rad.y = deg2rad(rotation_correction.y)
@@ -482,6 +480,7 @@ func set_retarget_skeleton_path(p_retarget_skeleton_node_path : NodePath) -> voi
 	_retarget_skeleton = null
 	retarget_skeleton_node_path = p_retarget_skeleton_node_path
 	_calculate_retargeting_data = true
+	correction_bone_mapping.clear()
 
 func get_retarget_skeleton_path() -> NodePath:
 	return retarget_skeleton_node_path
@@ -490,6 +489,7 @@ func get_retarget_skeleton_path() -> NodePath:
 func set_source_animationplayer_path(p_source_animationplayer_path : NodePath) -> void:
 	_source_animationplayer = null
 	source_animationplayer_node_path = p_source_animationplayer_path
+	_calculate_retargeting_data = true
 
 func get_source_animationplayer_path() -> NodePath:
 	return source_animationplayer_node_path
@@ -498,6 +498,7 @@ func get_source_animationplayer_path() -> NodePath:
 func set_retarget_animationplayer_path(p_retarget_animationplayer_path : NodePath) -> void:
 	_retarget_animationplayer = null
 	retarget_animationplayer_node_path = p_retarget_animationplayer_path
+	_calculate_retargeting_data = true
 
 func get_retarget_animationplayer_path() -> NodePath:
 	return retarget_animationplayer_node_path
@@ -579,7 +580,7 @@ func get_custom_bone_mapping() -> Dictionary:
 func set_sync_playback(p_enabled) -> void:
 	sync_playback = p_enabled
 	if sync_playback and _source_animationplayer and _retarget_animationplayer:
-		var current_animation_playback_id : String = _source_animationplayer.get_current_animation()
+		var current_animation_playback_id : String = _source_animationplayer.get_assigned_animation()
 		if current_animation_playback_id != "":
 			if _retarget_animationplayer.has_animation(current_animation_playback_id):
 				_source_animationplayer.stop()
@@ -591,8 +592,51 @@ func get_sync_playback() -> bool:
 	return sync_playback
 
 
-var retarget_mapping : Dictionary = {}
 
+
+func set_correction_bone(p_correction_bone) -> void:
+	correction_bone = p_correction_bone
+	if correction_bone in correction_bone_mapping:
+		position_correction = correction_bone_mapping[correction_bone].get("position_correction", Vector3(0.0, 0.0, 0.0))
+		rotation_correction = correction_bone_mapping[correction_bone].get("rotation_correction", Vector3(0.0, 0.0, 0.0))
+		scale_correction = correction_bone_mapping[correction_bone].get("scale_correction", Vector3(0.0, 0.0, 0.0))
+	else:
+		correction_bone_mapping[correction_bone] = {
+			"position_correction" : Vector3(0.0, 0.0, 0.0),
+			"rotation_correction" : Vector3(0.0, 0.0, 0.0),
+			"scale_correction" : Vector3(0.0, 0.0, 0.0)
+		}
+
+func get_correction_bone() -> String:
+	return correction_bone
+
+
+func set_position_correction(p_position_correction : Vector3) -> void:
+	position_correction = p_position_correction
+	if correction_bone in correction_bone_mapping:
+		correction_bone_mapping[correction_bone]["position_correction"] = position_correction
+func get_position_correction() -> Vector3:
+	return position_correction
+
+
+func set_rotation_correction(p_rotation_correction : Vector3) -> void:
+	rotation_correction = p_rotation_correction
+	if correction_bone in correction_bone_mapping:
+		correction_bone_mapping[correction_bone]["rotation_correction"] = rotation_correction
+func get_rotation_correction() -> Vector3:
+	return rotation_correction
+
+
+func set_scale_correction(p_scale_correction : Vector3) -> void:
+	scale_correction = p_scale_correction
+	if correction_bone in correction_bone_mapping:
+		correction_bone_mapping[correction_bone]["scale_correction"] = scale_correction
+func get_scale_correction() -> Vector3:
+	return scale_correction
+
+
+var retarget_mapping : Dictionary = {}
+var correction_bone_mapping : Dictionary = {}
 var _source_skeleton : Skeleton
 var _source_animationplayer : AnimationPlayer
 var _retarget_skeleton : Skeleton
