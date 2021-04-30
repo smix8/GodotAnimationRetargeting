@@ -87,7 +87,6 @@ class AnimationRetargeting : public Node {
 		// RETARGETING
 
 		Dictionary retarget_mapping;
-		Dictionary saved_rest_poses;
 
 		Array ignore_bones;
 		
@@ -185,7 +184,7 @@ class AnimationRetargeting : public Node {
 		AnimationPlayer *get_source_animationplayer() const { return _source_animationplayer; };
 		AnimationPlayer *get_retarget_animationplayer() const { return _retarget_animationplayer; };
 
-		void set_animation_export_format(AnimationExportFormat p_animation_export_format);		
+		void set_animation_export_format(AnimationExportFormat p_animation_export_format);
 		AnimationExportFormat get_animation_export_format() const;
 
 		void set_export_directory(const String &p_directory);
@@ -233,12 +232,25 @@ class AnimationRetargeting : public Node {
 		double _skeleton_scale_mod = 1.0;
 		double _root_motion_scale = 1.0;
 		String _source_path_animationplayer_to_skeleton = "";
-		String _retarget_path_animationplayer_to_skeleton = "";	
-		bool _calculate_retargeting_data = true;	
+		String _retarget_path_animationplayer_to_skeleton = "";
+		bool _calculate_retargeting_data = true;
 
 		bool _valid_setup();
 		Ref<Animation> _retarget_animation_track(Ref<Animation> &p_source_animation);
 		void _add_missing_bones_in_animation_track(Ref<Animation> &p_new_retargeted_animation);
+
+		struct CorrectionBoneData {
+			Vector3 position_correction;
+			Vector3 rotation_correction;
+			Vector3 scale_correction;
+			CorrectionBoneData(){
+				position_correction = Vector3(0.0, 0.0, 0.0);
+				rotation_correction = Vector3(0.0, 0.0, 0.0);
+				scale_correction = Vector3(0.0, 0.0, 0.0);
+			};
+		};
+
+		Map<StringName, CorrectionBoneData> correction_bone_mapping;
 
 		Dictionary custom_bone_mapping;
 		Dictionary mixamo_mapping;
