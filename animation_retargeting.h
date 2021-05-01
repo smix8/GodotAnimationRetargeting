@@ -233,6 +233,10 @@ class AnimationRetargeting : public Node {
 		double _root_motion_scale = 1.0;
 		String _source_path_animationplayer_to_skeleton = "";
 		String _retarget_path_animationplayer_to_skeleton = "";
+		NodePath _source_animationplayer_root_nodepath = NodePath();
+		NodePath _retarget_animationplayer_root_nodepath = NodePath();
+		Node* _source_animationplayer_root_node;
+		Node* _retarget_animationplayer_root_node;
 		bool _calculate_retargeting_data = true;
 
 		bool _valid_setup();

@@ -35,6 +35,13 @@
  */
 
 bool AnimationRetargeting::has_retargeting_data() const {
+	if (_source_animationplayer->get_root() != _source_animationplayer_root_nodepath) {
+		return false;
+	}
+	if (_retarget_animationplayer->get_root() != _retarget_animationplayer_root_nodepath) {
+		return false;
+	}
+
 	return !retarget_mapping.empty() && !_calculate_retargeting_data;
 }
 
@@ -104,22 +111,13 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 	if (has_retargeting_data()) {
 		return true;
 	}
-
-	_source_path_animationplayer_to_skeleton = String(_source_animationplayer->get_path_to(_source_skeleton));
-	if (_source_path_animationplayer_to_skeleton.begins_with("../")) {
-		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("../", "");
-	}
-	if (_source_path_animationplayer_to_skeleton.begins_with("/")) {
-		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("/", "");
-	}
-
-	_retarget_path_animationplayer_to_skeleton = String(_retarget_animationplayer->get_path_to(_retarget_skeleton));
-	if (_retarget_path_animationplayer_to_skeleton.begins_with("../")) {
-		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("../", "");
-	}
-	if (_retarget_path_animationplayer_to_skeleton.begins_with("/")) {
-		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("/", "");
-	}
+	
+	_source_animationplayer_root_nodepath = _source_animationplayer->get_root();
+	_retarget_animationplayer_root_nodepath = _retarget_animationplayer->get_root();
+	_source_animationplayer_root_node = _source_animationplayer->get_node(_source_animationplayer_root_nodepath);
+	_retarget_animationplayer_root_node = _retarget_animationplayer->get_node(_retarget_animationplayer_root_nodepath);
+	_source_path_animationplayer_to_skeleton = String(_source_animationplayer_root_node->get_path_to(_source_skeleton));
+	_retarget_path_animationplayer_to_skeleton = String(_retarget_animationplayer_root_node->get_path_to(_retarget_skeleton));
 
 	for (int source_skeleton_bone_inx = 0; source_skeleton_bone_inx < _source_skeleton->get_bone_count(); source_skeleton_bone_inx++) {
 
