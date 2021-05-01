@@ -71,6 +71,11 @@ export(Vector3) var scale_correction = Vector3(0.0, 0.0, 0.0) setget set_scale_c
 
 
 func has_retargeting_data() -> bool:
+	if _source_animationplayer.get_root() != _source_animationplayer_root_nodepath:
+		return false
+	if _retarget_animationplayer.get_root() != _retarget_animationplayer_root_nodepath:
+		return false
+	
 	return not retarget_mapping.empty() and not _calculate_retargeting_data
 
 
@@ -128,22 +133,13 @@ func calculate_retargeting_data() -> bool:
 		return false
 	if has_retargeting_data():
 		return true
-		
-	_source_path_animationplayer_to_skeleton = String(_source_animationplayer.get_path_to(_source_skeleton))
-	if _source_path_animationplayer_to_skeleton.begins_with("../"):
-		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("../","")
-	elif _source_path_animationplayer_to_skeleton.begins_with(".."): # parent node is skeleton
-		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("..",".")
-	elif _source_path_animationplayer_to_skeleton.begins_with("/"):
-		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("/","")
 	
-	_retarget_path_animationplayer_to_skeleton = String(_retarget_animationplayer.get_path_to(_retarget_skeleton))
-	if _retarget_path_animationplayer_to_skeleton.begins_with("../"):
-		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("../","")
-	elif _retarget_path_animationplayer_to_skeleton.begins_with(".."):
-		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("..",".")
-	elif _retarget_path_animationplayer_to_skeleton.begins_with("/"):
-		_retarget_path_animationplayer_to_skeleton = _retarget_path_animationplayer_to_skeleton.replace("/","")
+	_source_animationplayer_root_nodepath = _source_animationplayer.get_root()
+	_retarget_animationplayer_root_nodepath = _retarget_animationplayer.get_root()
+	_source_animationplayer_root_node = _source_animationplayer.get_node(_source_animationplayer_root_nodepath)
+	_retarget_animationplayer_root_node = _retarget_animationplayer.get_node(_retarget_animationplayer_root_nodepath)
+	_source_path_animationplayer_to_skeleton = String(_source_animationplayer_root_node.get_path_to(_source_skeleton))
+	_retarget_path_animationplayer_to_skeleton = String(_retarget_animationplayer_root_node.get_path_to(_retarget_skeleton))
 	
 	for source_skeleton_bone_inx in _source_skeleton.get_bone_count():
 	
@@ -649,6 +645,10 @@ var _skeleton_scale_mod : float = 1.0
 var _root_motion_scale : float = 1.0
 var _source_path_animationplayer_to_skeleton : String = ""
 var _retarget_path_animationplayer_to_skeleton : String = ""
+var _source_animationplayer_root_nodepath : NodePath = NodePath()
+var _retarget_animationplayer_root_nodepath : NodePath = NodePath()
+var _source_animationplayer_root_node : Node
+var _retarget_animationplayer_root_node : Node
 var _calculate_retargeting_data : bool = true
 var correction_mode = CORRECTION_MODE_DISABLED
 
