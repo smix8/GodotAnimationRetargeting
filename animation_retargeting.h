@@ -32,9 +32,9 @@
 #define ANIMATION_RETARGETING_H
 
 
-#include "core/math/transform.h"
-#include "core/os/dir_access.h"
-#include "core/os/file_access.h"
+#include "core/math/transform_3d.h"
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
 #include "scene/animation/animation_player.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/resources/packed_scene.h"

@@ -68,13 +68,13 @@ void AnimationRetargeting::start_retargeting() {
 	}
 
 	for (int bone_inx = 0; bone_inx < _source_skeleton->get_bone_count(); bone_inx++) {
-		_source_skeleton->set_bone_custom_pose(bone_inx, Transform());
-		_source_skeleton->set_bone_pose(bone_inx, Transform());
+                _source_skeleton->set_bone_custom_pose(bone_inx, Transform3D());
+                _source_skeleton->set_bone_pose(bone_inx, Transform3D());
 	}
 
 	for (int bone_inx = 0; bone_inx < _retarget_skeleton->get_bone_count(); bone_inx++) {
-		_retarget_skeleton->set_bone_custom_pose(bone_inx, Transform());
-		_retarget_skeleton->set_bone_pose(bone_inx, Transform());
+                _retarget_skeleton->set_bone_custom_pose(bone_inx, Transform3D());
+                _retarget_skeleton->set_bone_pose(bone_inx, Transform3D());
 	}
 
 	String current_animation_playback_id = _source_animationplayer->get_current_animation();
@@ -110,7 +110,7 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("../", "");
 	} else if (_source_path_animationplayer_to_skeleton.begins_with("..")) {
 		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("..", ".");
-	} else if (_source_path_animationplayer_to_skeleton.begins_with("/")) {
+        } else if (_source_path_animationplayer_to_skeleton.begins_with("/")) {
 		_source_path_animationplayer_to_skeleton = _source_path_animationplayer_to_skeleton.replace("/", "");
 	}
 
@@ -148,14 +148,14 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 			_retarget_root_bone_name = bone_name;
 		}
 
-		Transform _source_bone_rest = _source_skeleton->get_bone_rest(source_skeleton_bone_inx);
-		Transform _target_bone_rest = _retarget_skeleton->get_bone_rest(retarget_skeleton_bone_inx);
+                Transform3D _source_bone_rest = _source_skeleton->get_bone_rest(source_skeleton_bone_inx);
+                Transform3D _target_bone_rest = _retarget_skeleton->get_bone_rest(retarget_skeleton_bone_inx);
 
 		Vector3 _source_bone_rest_pos = _source_bone_rest.origin;
 		Vector3 _target_bone_rest_pos = _target_bone_rest.origin;
 
-		Quat _source_bone_rest_rot = _source_bone_rest.basis.get_rotation_quat();
-		Quat _target_bone_rest_rot = _target_bone_rest.basis.get_rotation_quat();
+                Quaternion _source_bone_rest_rot = _source_bone_rest.basis.get_rotation_quaternion();
+                Quaternion _target_bone_rest_rot = _target_bone_rest.basis.get_rotation_quaternion();
 
 		Vector3 position_offset_vector;
 
@@ -173,12 +173,12 @@ bool AnimationRetargeting::calculate_retargeting_data() {
 			position_offset_vector = _target_bone_rest_pos - _source_bone_rest_pos;
 		}
 
-		Quat rotation_offset_quat = _target_bone_rest_rot.normalized().inverse() * _source_bone_rest_rot.normalized();
+                Quaternion rotation_offset_quaternion = _target_bone_rest_rot.normalized().inverse() * _source_bone_rest_rot.normalized();
 		Vector3 scale_offset_vector = _source_bone_rest.basis.get_scale() - _target_bone_rest.basis.get_scale();
 
 		Dictionary od;
 		od["origin_offset"] = position_offset_vector;
-		od["quat_offset"] = rotation_offset_quat;
+                od["quat_offset"] = rotation_offset_quaternion;
 		od["scale_offset"] = scale_offset_vector;
 		retarget_mapping[bone_name] = od;
 	}
@@ -322,7 +322,7 @@ void AnimationRetargeting::_add_missing_bones_in_animation_track(Ref<Animation> 
 		found_bone_track = false;
 
 		for (int _track_inx = 0; _track_inx < p_new_retargeted_animation->get_track_count(); _track_inx++) {
-			if (!p_new_retargeted_animation->track_get_type(_track_inx) == Animation::TYPE_TRANSFORM) {
+                        if (!p_new_retargeted_animation->track_get_type(_track_inx) == Animation::TYPE_TRANSFORM3D) {
 				continue;
 			}
 			int subname_count = p_new_retargeted_animation->track_get_path(_track_inx).get_subname_count();
@@ -349,13 +349,13 @@ void AnimationRetargeting::_add_missing_bones_in_animation_track(Ref<Animation> 
 
 				NodePath new_animation_track_bone_nodepath = NodePath(bone_stringpath);
 				Vector3 new_translation = Vector3(0.0, 0.0, 0.0);
-				Quat new_rotation_quat = Quat();
+                                Quaternion new_rotation_quaternion = Quaternion();
 				Vector3 new_scale = Vector3(1.0, 1.0, 1.0);
 
-				p_new_retargeted_animation->add_track(Animation::TYPE_TRANSFORM, new_track_inx);
+                                p_new_retargeted_animation->add_track(Animation::TYPE_TRANSFORM3D, new_track_inx);
 				p_new_retargeted_animation->track_set_path(new_track_inx, new_animation_track_bone_nodepath);
-				p_new_retargeted_animation->transform_track_insert_key(new_track_inx, 0.0, new_translation, new_rotation_quat, new_scale);
-				p_new_retargeted_animation->transform_track_insert_key(new_track_inx, p_new_retargeted_animation->get_length(), new_translation, new_rotation_quat, new_scale);
+                                p_new_retargeted_animation->transform_track_insert_key(new_track_inx, 0.0, new_translation, new_rotation_quaternion, new_scale);
+                                p_new_retargeted_animation->transform_track_insert_key(new_track_inx, p_new_retargeted_animation->get_length(), new_translation, new_rotation_quaternion, new_scale);
 			}
 		}
 	}
@@ -371,7 +371,7 @@ void AnimationRetargeting::_add_missing_bones_in_animation_track(Ref<Animation> 
 			if (_deleted_track == true) {
 				continue;
 			}
-			if (!p_new_retargeted_animation->track_get_type(_track_inx) == Animation::TYPE_TRANSFORM) {
+                        if (!p_new_retargeted_animation->track_get_type(_track_inx) == Animation::TYPE_TRANSFORM3D) {
 				continue;
 			}
 			_trackpath = String(p_new_retargeted_animation->track_get_path(_track_inx));
@@ -412,7 +412,7 @@ Ref<Animation> AnimationRetargeting::_retarget_animation_track(Ref<Animation> &p
 	
 	for (int _track_inx = 0; _track_inx < new_retargeted_animation->get_track_count(); _track_inx++) {
 
-		if (!new_retargeted_animation->track_get_type(_track_inx) == Animation::TYPE_TRANSFORM) {
+                if (!new_retargeted_animation->track_get_type(_track_inx) == Animation::TYPE_TRANSFORM3D) {
 			continue;
 		}
 
@@ -448,17 +448,17 @@ Ref<Animation> AnimationRetargeting::_retarget_animation_track(Ref<Animation> &p
 			Dictionary _keyframe_value_dict = new_retargeted_animation->track_get_key_value(_track_inx, _track_key_inx);
 
 			Vector3 _key_origin = _keyframe_value_dict["location"];
-			Quat _key_quat = _keyframe_value_dict["rotation"];
+                        Quaternion _key_quaternion = _keyframe_value_dict["rotation"];
 			Vector3 _key_scale = _keyframe_value_dict["scale"];
 
 			Dictionary _bone_dict = retarget_mapping[bone_name];
 
 			Vector3 _origin_offset = _bone_dict["origin_offset"];
-			Quat _quat_offset = _bone_dict["quat_offset"];
+                        Quaternion _quaternion_offset = _bone_dict["quat_offset"];
 			Vector3 _scale_offset = _bone_dict["scale_offset"];
 
 			Vector3 _new_key_origin = _key_origin;
-			Quat _new_key_quat = _key_quat;
+                        Quaternion _new_key_quaternion = _key_quaternion;
 			Vector3 _new_key_scale = _key_scale;
 
 			if ((retarget_scale) || ((bone_name == _retarget_root_bone_name) && root_motion)) {
@@ -492,10 +492,10 @@ Ref<Animation> AnimationRetargeting::_retarget_animation_track(Ref<Animation> &p
 					_rotation_correction_rad.x = Math::deg2rad(rotation_correction.x);
 					_rotation_correction_rad.y = Math::deg2rad(rotation_correction.y);
 					_rotation_correction_rad.z = Math::deg2rad(rotation_correction.z);
-					_new_key_quat = (((_quat_offset * _key_quat).normalized()) * Quat(_rotation_correction_rad).normalized()).normalized();
+                                        _new_key_quaternion = (((_quaternion_offset * _key_quaternion).normalized()) * Quaternion(_rotation_correction_rad).normalized()).normalized();
 
 				} else {
-					_new_key_quat = (_quat_offset * _key_quat).normalized();
+                                        _new_key_quaternion = (_quaternion_offset * _key_quaternion).normalized();
 				}
 			}
 
@@ -505,7 +505,7 @@ Ref<Animation> AnimationRetargeting::_retarget_animation_track(Ref<Animation> &p
 			}
 
 			_keyframe_value_dict["location"] = _new_key_origin;
-			_keyframe_value_dict["rotation"] = _new_key_quat;
+                        _keyframe_value_dict["rotation"] = _new_key_quaternion;
 			_keyframe_value_dict["scale"] = _new_key_scale;
 
 			new_retargeted_animation->track_set_key_value(_track_inx, _track_key_inx, _keyframe_value_dict);
