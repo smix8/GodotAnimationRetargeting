@@ -17,6 +17,7 @@ Introduces a new Node Type that can be used to transfer Animation data authored 
 ## Features:
 - New Godot Node type to retarget animations in both editor as well as runtime in exported games.
 - Transfer Animations and entire AnimationsPlayers between two similar Skeletons with a button press.
+- Multiple retargeting options to filter for certain animation ids.
 - Editing interface to correct bone errors for entire animations.
 - Bake options to create new skeleton animation variants from existing animations.
 - Live update to see all changes and corrections immediately inside the editor.
@@ -89,3 +90,9 @@ Devlog Video #3 Retargeting animations to multiple characters
 
 ## License
 MIT
+
+## Contributers
+Special thanks for fixing bugs or extensive testing:
+- stryker313
+- WiredDreamcaster
+
