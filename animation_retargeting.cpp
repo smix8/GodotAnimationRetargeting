@@ -205,26 +205,38 @@ void AnimationRetargeting::retarget_skeleton_animations() {
 		new_animationplayer = memnew(AnimationPlayer);
 	}
 
-	List<StringName> animation_list;
+	List<StringName> source_animation_list;
+	List<StringName> retarget_animation_list;
 
 	String playing_source_animation_id = _source_animationplayer->get_assigned_animation();
 	String playing_retarget_animation_id = _retarget_animationplayer->get_assigned_animation();
 
-	_source_animationplayer->get_animation_list(&animation_list);
+	_source_animationplayer->get_animation_list(&source_animation_list);
+	_retarget_animationplayer->get_animation_list(&retarget_animation_list);
 
-	if (animation_list.size() > 0) {
-		for (List<StringName>::Element *E = animation_list.front(); E; E = E->next()) {
+	if (source_animation_list.size() > 0) {
+		for (List<StringName>::Element *E = source_animation_list.front(); E; E = E->next()) {
 
 			StringName animation_id = StringName(E->get());
 
-			if (!_source_animationplayer->has_animation(animation_id)) {
+			if (!(_source_animationplayer->has_animation(animation_id))) {
 				continue;
 			}
+			
 			if (retarget_mode == AnimationRetargeting::RETARGET_MODE_CURRENT_ANIMATION) {
 				if (playing_source_animation_id != animation_id) {
 					continue;
 				}
+			} else if (retarget_mode == AnimationRetargeting::RETARGET_MODE_NEW_SOURCE_ANIMATION) {
+				if (_retarget_animationplayer->has_animation(animation_id)) {
+					continue;
+				}
+			} else if (retarget_mode == AnimationRetargeting::RETARGET_MODE_EXISTING_TARGET_ANIMATION) {
+				if (!(_retarget_animationplayer->has_animation(animation_id))) {
+					continue;
+				}
 			}
+
 			Ref<Animation> source_animation = _source_animationplayer->get_animation(animation_id);
 	
 			Ref<Animation> retargeted_animation = _retarget_animation_track(source_animation);
@@ -970,7 +982,7 @@ void AnimationRetargeting::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "source_animationplayer_path"), "set_source_animationplayer_path", "get_source_animationplayer_path");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "retarget_skeleton_path"), "set_retarget_skeleton_path", "get_retarget_skeleton_path");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "retarget_animationplayer_path"), "set_retarget_animationplayer_path", "get_retarget_animationplayer_path");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "retarget_mode", PROPERTY_HINT_ENUM, "animationplayer,current animation,placeholder"), "set_retarget_mode", "get_retarget_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "retarget_mode", PROPERTY_HINT_ENUM, "animationplayer,current animation,placeholder,new_source_animations,existing_target_animations"), "set_retarget_mode", "get_retarget_mode");
 
 	ADD_GROUP("Retargeting Options", "_retargeting_options");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "replace_retarget_animations"), "set_replace_retarget_animations", "get_replace_retarget_animations");
@@ -984,7 +996,7 @@ void AnimationRetargeting::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "retarget_skeleton_scale"), "set_retarget_skeleton_scale", "get_retarget_skeleton_scale");
 
 	ADD_GROUP("Exporting Options", "_exporting_options");
-		
+
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "export_animations"), "set_export_animations", "get_export_animations");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "export_animationplayer"), "set_export_animationplayer", "get_export_animationplayer");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "animation_export_format", PROPERTY_HINT_ENUM, "tres,anim"), "set_animation_export_format", "get_animation_export_format");
@@ -1007,6 +1019,8 @@ void AnimationRetargeting::_bind_methods() {
 	BIND_ENUM_CONSTANT(RETARGET_MODE_ANIMATIONPLAYER);
 	BIND_ENUM_CONSTANT(RETARGET_MODE_CURRENT_ANIMATION);
 	BIND_ENUM_CONSTANT(RETARGET_MODE_LIVE_MOTION_CAPTURE);
+	BIND_ENUM_CONSTANT(RETARGET_MODE_NEW_SOURCE_ANIMATION);
+	BIND_ENUM_CONSTANT(RETARGET_MODE_EXISTING_TARGET_ANIMATION);
 
 	BIND_ENUM_CONSTANT(ANIMATION_EXPORT_TRES);
 	BIND_ENUM_CONSTANT(ANIMATION_EXPORT_ANIM);

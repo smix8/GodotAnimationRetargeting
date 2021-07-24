@@ -114,7 +114,7 @@
 		If enabled creates a new [AnimationPlayer] container for all retargeted animations and saves it to a [PackedScene] in the export folder.
 		</member>
 		<member name="retarget_mode" type="int" setter="set_retarget_mode" getter="get_retarget_mode" enum="AnimationRetargeting.AnimationRetargetMode" default="0">
-		Defines which animations should be retargeted and how. Options are to retargeting the entire source animationplayer, only the current, playing animation or to record the source skeleton motion directly and push the resulting animation to the target skeleton for e.g. live motion capture.
+		Defines which animations should be retargeted and how. Options are to retargeting the entire source animationplayer, only the current, playing animation, only new animations only found in the source animationplayer or only existing animations found in the target animationplayer.
 		</member>
 	</members>
 	<constants>
@@ -127,7 +127,12 @@
 		<constant name="RETARGET_MODE_LIVE_MOTION_CAPTURE" value="2" enum="AnimationRetargetMode">
 		Retargetes the source [Skeleton] bone poses to the target [Skeleton] bone poses with a small frame buffer delay and optional recording inside a new [Animation] track.
 		</constant>
-		
+		<constant name="RETARGET_MODE_NEW_SOURCE_ANIMATION" value="3" enum="AnimationRetargetMode">
+		Retargetes only source animations that do not exist in the target animationplayer.
+		</constant>
+		<constant name="RETARGET_MODE_EXISTING_TARGET_ANIMATION" value="4" enum="AnimationRetargetMode">
+		Retargetes only source animations that already exist in the target animationplayer.
+		</constant>
 		<constant name="ANIMATION_EXPORT_TRES" value="0" enum="AnimationExportFormat">
 		Export retargeted animations as a TRES text file with better version-control support and human readability compared to ANIM binary files.
 		</constant>
