@@ -30,7 +30,10 @@ enum {
 
 enum {
 	RETARGET_MODE_ANIMATIONPLAYER,
-	RETARGET_MODE_CURRENT_ANIMATION
+	RETARGET_MODE_CURRENT_ANIMATION,
+	RETARGET_MODE_LIVE_MOTION_CAPTURE,
+	RETARGET_MODE_NEW_SOURCE_ANIMATION,
+	RETARGET_MODE_EXISTING_TARGET_ANIMATION
 }
 
 
@@ -39,7 +42,7 @@ export(NodePath) var source_animationplayer_node_path setget set_source_animatio
 export(NodePath) var retarget_skeleton_node_path setget set_retarget_skeleton_path, get_retarget_skeleton_path
 export(NodePath) var retarget_animationplayer_node_path setget set_retarget_animationplayer_path, get_retarget_animationplayer_path
 
-export(int, "animationplayer","current animation","placeholder") var retarget_mode : int = RETARGET_MODE_ANIMATIONPLAYER
+export(int, "entire animationplayer","only current animation","placeholder,only new source animations, only existing target animations") var retarget_mode : int = RETARGET_MODE_ANIMATIONPLAYER
 export(bool) var replace_retarget_animations : bool = true
 export(bool) var retarget_position : bool = false
 export(bool) var retarget_rotation : bool = true
@@ -229,6 +232,10 @@ func retarget_skeleton_animations() -> void:
 			if not _source_animationplayer.has_animation(animation_id):
 				continue
 			if retarget_mode == RETARGET_MODE_CURRENT_ANIMATION and _source_animationplayer.get_assigned_animation() != animation_id:
+				continue
+			elif retarget_mode == RETARGET_MODE_NEW_SOURCE_ANIMATION and _retarget_animationplayer.has_animation(animation_id):
+				continue
+			elif retarget_mode == RETARGET_MODE_EXISTING_TARGET_ANIMATION and not _retarget_animationplayer.has_animation(animation_id):
 				continue
 			var source_animation : Animation = _source_animationplayer.get_animation(animation_id)
 			
