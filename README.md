@@ -4,7 +4,7 @@
 
 Animation Retargeting module for Godot Game Engine.
 
-The module is work in progress, only use the master/main branch for testing.
+No longer developed as animation retargeting is core in Godot4 therefor archived.
 
 See [Godot 4.x](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_4.x) and [Godot 3.x](https://github.com/smix8/GodotAnimationRetargeting/tree/godot_3.x) branch respectively.
 
@@ -66,8 +66,6 @@ Your path should end up as "godotsourcefolder/modules/animation_retargeting".
 
 9. To use custom bone mappings load your {"source_bone_name":"target_bone_name"} Dictionary with set_custom_bone_mapping() before you call start_retargeting().
 It is better to save you custom bone mapping Dictionary in a script file (or read from JSON) so no progress is lost when the Godot Inspector bugs out.
-
-10. Hunt bugs!
 
 Refer to AnimationRetargeting Node documentation inside Godot Editor for more function and property explanations.
 
